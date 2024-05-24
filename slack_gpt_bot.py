@@ -1,6 +1,7 @@
 import json
 import os
 import openai
+import state_management, commands
 from slack_bolt import App
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
@@ -20,19 +21,19 @@ user_states = {}
 def message_handler(message, say):
     user_id = message['user']
     user_message = message['text'].strip()
-
+    
     # Initialize user state if not present
-    initialize_user_state(user_id, user_states)
-    update_last_activity(user_id, user_states)
+    state_management.initialize_user_state(user_id, user_states)
+    state_management.update_last_activity(user_id, user_states)
 
     # Check session timeout
-    if check_session_timeout(user_id, user_states):
+    if state_management.check_session_timeout(user_id, user_states):
         say("Session timed out due to inactivity. Starting a new session.")
         user_states.pop(user_id, None)
         return
 
     # Handle the user message
-    handle_message(user_id, user_message, say, user_states)
+    commands.handle_message(user_id, user_message, say, user_states)
 
 # Lambda 핸들러 생성
 def lambda_handler(event, context):
