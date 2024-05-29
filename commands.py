@@ -1,7 +1,7 @@
 import openai
 from utils import display_help, check_tokens_used
 from state_management import save_session, load_session
-from file_utils import generate_history_file
+# from file_utils import generate_history_file
 from datetime import datetime
 
 def handle_message(user_id, user_message, say, user_states, event):
@@ -59,10 +59,10 @@ def handle_message(user_id, user_message, say, user_states, event):
         return
 
     # Handle /download_history command
-    if user_message.lower() == "/download_history":
-        file_path = generate_history_file(user_id, user_states)
-        say(f"Download your conversation history here: {file_path}", thread_ts=thread_ts)
-        return
+    # if user_message.lower() == "/download_history":
+    #     file_path = generate_history_file(user_id, user_states)
+    #     say(f"Download your conversation history here: {file_path}", thread_ts=thread_ts)
+    #     return
 
     # Handle /check_tokens command
     if user_message.lower() == "/check_tokens":
