@@ -31,19 +31,18 @@ def check_tokens_used(api_key):
     """
     try:
         # Initialize the OpenAI API key
-        openai.api_key = api_key
-        
+
         # Calculate the start of the current month
         now = datetime.now()
         start_of_month = datetime(now.year, now.month, 1)
-        
+
         # Retrieve the usage information
         usage = openai.Usage.list(start_date=start_of_month, end_date=now)
-        
+
         # Calculate the total tokens used in the current month
         total_tokens = sum(item['n_tokens'] for item in usage['data'])
-        
+
         return f"You have used {total_tokens} tokens so far this month."
-    
+
     except Exception as e:
         return f"An error occurred while checking the tokens used: {str(e)}"

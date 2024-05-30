@@ -1,4 +1,6 @@
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 from utils import display_help, check_tokens_used
 from state_management import save_session, load_session
 # from file_utils import generate_history_file
@@ -51,7 +53,7 @@ def handle_message(user_id, user_message, say, user_states, event):
         session_name = user_message[len("/save "):].strip()
         save_session(session_name, user_id, user_states, say, thread_ts)
         return
-    
+
     # Handle /load command
     if user_message.startswith("/load "):
         session_name = user_message[len("/load "):].strip()
@@ -82,24 +84,22 @@ def handle_message(user_id, user_message, say, user_states, event):
 
     try:
         # Call OpenAI's ChatCompletion endpoint to get a response
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": final_prompt}
-            ]
-        )
-        
+        response = client.chat.completions.create(model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": final_prompt}
+        ])
+
         # Extract the response text from the API response
-        bot_reply = response['choices'][0]['message']['content']
+        bot_reply = response.choices[0].message.content
         say(bot_reply, thread_ts=thread_ts)
-        
+
         # Save the question and response to user state
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         user_states[user_id]["previous_question"] = user_message
         user_states[user_id]["history"].append(f"[{timestamp}] User: {user_message}")
         user_states[user_id]["history"].append(f"[{timestamp}] Bot: {bot_reply}")
-    
+
     except Exception as e:
         say(f"Sorry, I couldn't process your request. Error: {str(e)}", thread_ts=thread_ts)
 
@@ -113,23 +113,21 @@ def handle_start_command(user_id, question, say, user_states, thread_ts):
 
     try:
         # Call OpenAI's ChatCompletion endpoint to get a response
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": final_prompt}
-            ]
-        )
-        
+        response = client.chat.completions.create(model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": final_prompt}
+        ])
+
         # Extract the response text from the API response
-        bot_reply = response['choices'][0]['message']['content']
+        bot_reply = response.choices[0].message.content
         say(bot_reply, thread_ts=thread_ts)
-        
+
         # Save the question and response to user state
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         user_states[user_id]["previous_question"] = question
         user_states[user_id]["history"].append(f"[{timestamp}] User: {question}")
         user_states[user_id]["history"].append(f"[{timestamp}] Bot: {bot_reply}")
-    
+
     except Exception as e:
         say(f"Sorry, I couldn't process your request. Error: {str(e)}", thread_ts=thread_ts)
