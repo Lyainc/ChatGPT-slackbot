@@ -61,7 +61,7 @@ def handle_message(event, say):
         bot_id = bot_info["user_id"]
         question = user_message.replace(f"<@{bot_id}>", "").strip()
         
-        if question == "History All Delete":
+        if question == "/clear":
             user_conversations.clear()
             say(text="모든 대화 내역이 삭제되었습니다.", thread_ts=thread_ts, channel=channel_id)
             return
@@ -83,7 +83,7 @@ def handle_message(event, say):
         token_usage_message = f"_질문에 사용된 토큰 수: {question_tokens}, 답변에 사용된 토큰 수: {answer_tokens}_"
 
         # 답변에 token_usage_message 추가 (개행 후 이탤릭체로)
-        answer += f"\n{token_usage_message}"
+        answer += f"\n\n{token_usage_message}"
         
         logging.info(f"생성된 답변: {answer}")
         # 메시지를 원래 메시지의 쓰레드에 보냅니다.
@@ -92,15 +92,6 @@ def handle_message(event, say):
             text=answer,
             thread_ts=thread_ts
         )
-        
-        logging.info("응답 전송 성공")
-        
-        # # 질문과 답변의 토큰 사용량 계산
-        # question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
-        # token_usage_message = f"질문에 사용된 토큰 수: {question_tokens}, 답변에 사용된 토큰 수: {answer_tokens}"
-        
-        # # 토큰 사용량 정보를 슬랙에 전송
-        # say(text=token_usage_message, thread_ts=thread_ts, channel=channel_id)
         
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)

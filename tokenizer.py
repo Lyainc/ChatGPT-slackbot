@@ -1,4 +1,5 @@
 import logging
+import tiktoken
 
 def get_tokenizer(model_name):
     try:
