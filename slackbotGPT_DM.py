@@ -77,12 +77,6 @@ def handle_dm(event, say):
                     {"role": "system", "content": "You are a helpful assistant."}
                 ]
             
-            if question == "//대화종료":
-                if thread_ts in user_conversations:
-                    del user_conversations[thread_ts]
-                say(text="대화를 종료합니다.", thread_ts=thread_ts, channel=channel_id)
-                return
-            
             # 대화 히스토리에 사용자 메시지 추가
             user_conversations[user_id].append({"role": "user", "content": question})
             debug_log(f"User conversation updated: {user_conversations[user_id]}")
