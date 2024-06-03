@@ -1,12 +1,16 @@
 import logging
 import threading
+import os
+import time
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from dotenv import load_dotenv
-import os
-import time
 from openai import OpenAI
 from tokenizer import count_token_usage
+
+# Constants
+WAITING_MESSAGE_DELAY = 5  # seconds
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -14,16 +18,15 @@ logging.basicConfig(level=logging.INFO)
 # .env 파일에서 환경 변수 로드
 load_dotenv()
 
-# Constants
-WAITING_MESSAGE_DELAY = 5  # seconds
-
 # 환경 변수에서 Slack 토큰 및 OpenAI API 키 가져오기
 slack_app_token = os.environ.get("SLACK_APP_TOKEN")
 slack_bot_token = os.environ.get("SLACK_BOT_TOKEN")
 slack_signing_secret = os.environ.get("SLACK_SIGNING_KEY")
 openai_api_key = os.environ.get("OPEN_AI_API")
 
-if not slack_app_token or not slack_bot_token or not slack_signing_secret or not openai_api_key:
+# 환경 변수 확인
+required_env_vars = [slack_app_token, slack_bot_token, slack_signing_secret, openai_api_key]
+if not all(required_env_vars):
     logging.error("환경 변수가 올바르게 설정되지 않았습니다.")
     exit(1)
 
@@ -34,17 +37,19 @@ client = OpenAI(api_key=openai_api_key)
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
 # 봇 토큰 유효성 검증
-try:
-    auth_response = app.client.auth_test()
-    if not auth_response["ok"]:
-        logging.error(f"Error during auth_test: {auth_response['error']}")
+def validate_bot_token():
+    try:
+        auth_response = app.client.auth_test()
+        if not auth_response["ok"]:
+            logging.error(f"Error during auth_test: {auth_response['error']}")
+            exit(1)
+        else:
+            logging.info("Slack Bot Token is valid")
+    except Exception as e:
+        logging.error("Error testing Slack Bot Token validity", exc_info=True)
         exit(1)
-    else:
-        logging.info("Slack Bot Token is valid")
-except Exception as e:
-    logging.error("Error testing Slack Bot Token validity")
-    logging.error(str(e))
-    exit(1)
+        
+validate_bot_token()
 
 # 사용자 대화 히스토리를 저장할 딕셔너리
 user_conversations = {}
@@ -55,17 +60,17 @@ def debug_log(message, event=None):
     else:
         logging.info(message)
 
+def send_waiting_message(say, thread_ts, channel_id, stop_event):
+    delay_seconds = 0
+    while not stop_event.is_set():
+        delay_seconds += WAITING_MESSAGE_DELAY
+        stop_event.wait(WAITING_MESSAGE_DELAY)
+        if not stop_event.is_set():
+            say(text=f"ChatGPT가 답변을 열심히 만들고 있습니다. 잠시만 기다려주세요 ({delay_seconds}s)", thread_ts=thread_ts, channel=channel_id)
+
 @app.event("message")
 def handle_dm(event, say):
     debug_log("Received an event", event)  # Logging the raw event
-    
-    def send_waiting_message(say, thread_ts, channel_id, stop_event):
-        delay_seconds = 0
-        while not stop_event.is_set():
-            delay_seconds += WAITING_MESSAGE_DELAY
-            stop_event.wait(WAITING_MESSAGE_DELAY)
-            if not stop_event.is_set():
-                say(text=f"ChatGPT가 답변을 열심히 만들고 있습니다. 잠시만 기다려주세요 ({delay_seconds}s)", thread_ts=thread_ts, channel=channel_id)
     
     try:
         # Only process the events that are direct messages
