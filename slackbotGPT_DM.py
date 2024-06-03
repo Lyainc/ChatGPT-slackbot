@@ -68,6 +68,20 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event):
         if not stop_event.is_set():
             say(text=f"ChatGPT가 답변을 열심히 만들고 있습니다. 잠시만 기다려주세요 ({delay_seconds}s)", thread_ts=thread_ts, channel=channel_id)
 
+# 사용자 ID로부터 Slack 사용자 이름 가져오기
+def get_user_name(user_id):
+    try:
+        user_info = app.client.users_info(user=user_id)
+        if user_info["ok"]:
+            user_name = user_info["user"]["real_name"]
+            return user_name
+        else:
+            logging.error(f"Error fetching user info: {user_info['error']}")
+            return None
+    except Exception as e:
+        logging.error(f"Error retrieving user name for user_id {user_id}", exc_info=True)
+        return None
+
 @app.event("message")
 def handle_dm(event, say):
     debug_log("Received an event", event)  # Logging the raw event
@@ -82,6 +96,11 @@ def handle_dm(event, say):
         user_id = event["user"]
         channel_id = event["channel"]
         thread_ts = event.get("thread_ts") or event["ts"]
+        
+        user_name = get_user_name(user_id)
+        if not user_name:
+            say(text="사용자 이름을 가져오는 데 실패했습니다. 나중에 다시 시도해 주세요.", thread_ts=thread_ts)
+            return
 
         debug_log(f"Received message: {user_message} from user: {user_id} in DM: {channel_id}")
         
@@ -110,7 +129,7 @@ def handle_dm(event, say):
             
             # Get initial response from OpenAI
             model_name = "gpt-4o-2024-05-13"
-            answer = get_openai_response(user_id, model_name)
+            answer = get_openai_response(user_id, model_name, user_name)
             
             # 시간 측정 종료
             end_time = time.time()
@@ -148,7 +167,7 @@ def handle_dm(event, say):
                 
                 # Get response from OpenAI
                 model_name = "gpt-4o-2024-05-13"
-                answer = get_openai_response(user_id, model_name)
+                answer = get_openai_response(user_id, model_name, user_name)
                 
                 # 시간 측정 종료
                 end_time = time.time()
@@ -165,25 +184,23 @@ def handle_dm(event, say):
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
 
-def get_openai_response(user_id, model_name):
+def get_openai_response(user_id, model_name, user_name):
     try:
         completion = client.chat.completions.create(
             model=model_name,
-            messages=user_conversations[user_id]
+            messages=user_conversations[user_id],
+            user=user_name  # 실제 사용자를 식별할 수 있도록 user_name 추가
         )
         answer = completion.choices[0].message.content.strip()
-        
         # Count token usage
         question_tokens, answer_tokens = count_token_usage(
-            user_conversations[user_id][-1]["content"], 
-            answer, 
+            user_conversations[user_id][-1]["content"],
+            answer,
             model_name
         )
-        token_usage_message = f"_질문에 사용된 토큰 수: {question_tokens}, 답변에 사용된 토큰 수: {answer_tokens}_"
-
+        token_usage_message = f"질문에 사용된 토큰 수: {question_tokens}, 답변에 사용된 토큰 수: {answer_tokens}"
         # 답변에 token_usage_message 추가 (개행 후 이탤릭체로)
         answer += f"\n\n{token_usage_message}"
-
         logging.info(f"Generated answer: {answer}")
         return answer
     except Exception as e:
