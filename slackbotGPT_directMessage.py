@@ -98,7 +98,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event):
         delay_seconds += WAITING_MESSAGE_DELAY
         stop_event.wait(WAITING_MESSAGE_DELAY)
         if not stop_event.is_set():
-            say(text=f"ChatGPT가 답변을 열심히 만들고 있습니다. 잠시만 기다려주세요 ({delay_seconds}s)", thread_ts=thread_ts, channel=channel_id)
+            say(text=f"ChatGPT가 답변을 열심히 만들고 있습니다. 잠시만 기다려주세요 ({delay_seconds}sec...)", thread_ts=thread_ts, channel=channel_id)
 
 # 사용자 ID로부터 Slack 사용자 이름 가져오기
 def get_user_name(user_id):
@@ -137,11 +137,12 @@ def handle_dm(event, say):
             say(text="사용자 이름을 가져오는 데 실패했습니다. 나중에 다시 시도해 주세요.", thread_ts=thread_ts)
             return
 
-        logging.info(f"Received message: {user_message} from user: {user_name} (ID: {user_id}) in DM: {channel_id}")
+        logging.info(f"Received message: {user_message}")
 
         if user_message.startswith("//대화시작"):
             question = user_message.replace("//대화시작", "").strip()
-            logging.info(f"Extracted question: {question} from user: {user_name} (ID: {user_id})")
+            logging.info(f"Extracted question: {question}")
+            say(text="질문을 인식했습니다. ChatGPT에게 질문하고 있습니다.", thread_ts=thread_ts)
 
             if user_id not in user_conversations:
                 user_conversations[user_id] = {}
@@ -233,7 +234,7 @@ def handle_dm(event, say):
 
             # 답변과 시간 정보를 슬랙에 출력
             say(text=f"{answer}\n응답 시간: {elapsed_time_ms:.2f} ms", thread_ts=thread_ts)
-            logging.info(f"Response sent: {answer} (Elapsed time: {elapsed_time_ms:.2f} ms)")
+            logging.info(f"Response sent: \n\n{answer}\n\n--\n\n(Elapsed time: {elapsed_time_ms:.2f} ms)")
 
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
@@ -244,12 +245,20 @@ def get_openai_response(user_id, thread_ts, model_name):
         # 유저별 OpenAI API 키 가져오기 및 클라이언트 초기화
         api_key = get_openai_api_key(user_id)
         openai_client = OpenAI(api_key=api_key)
+        masked_api_key = '-'.join(api_key.split('-')[:3])
+        
+        # 로그에 요청을 보낸 API 키 마스킹 후 출력
+        logging.info(f"Using OpenAI API Key(Masked): {masked_api_key}...")
         
         # Slack API로부터 User Name을 가져옵니다.
         user_name = get_user_name(user_id)
 
         if not user_name:
             raise Exception("User name could not be retrieved.")
+        
+        # 대화 내역 가져오기 및 로그 출력
+        received_message = user_conversations[user_id][thread_ts][-1]["content"]
+
         completion = openai_client.chat.completions.create(
             model=model_name,
             messages=user_conversations[user_id][thread_ts],
@@ -270,10 +279,8 @@ def get_openai_response(user_id, thread_ts, model_name):
 
         answer += f"\n\n{token_usage_message}"
 
-        logging.info(f"Generated answer: {answer}")
-
         return answer
-
+    
     except openai.RateLimitError as e:
         logging.error("Rate limit exceeded:", exc_info=True)
         return "서버 요청 한도 초과로 인해 잠시 후 다시 시도해 주세요."
