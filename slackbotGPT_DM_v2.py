@@ -3,31 +3,40 @@ import threading
 import os
 import time
 import openai
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from dotenv import load_dotenv
 from openai import OpenAI
 from tokenizer import count_token_usage
+
 # Constants
 WAITING_MESSAGE_DELAY = 5  # seconds
+
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # .env 파일에서 환경 변수 로드
 load_dotenv()
+
 # 환경 변수에서 Slack 토큰 및 OpenAI API 키 가져오기
 slack_app_token = os.environ.get("SLACK_APP_TOKEN")
 slack_bot_token = os.environ.get("SLACK_BOT_TOKEN")
 slack_signing_secret = os.environ.get("SLACK_SIGNING_KEY")
 openai_api_key = os.environ.get("OPEN_AI_API")
+
 # 환경 변수 확인
 required_env_vars = [slack_app_token, slack_bot_token, slack_signing_secret, openai_api_key]
 if not all(required_env_vars):
     logging.error("환경 변수가 올바르게 설정되지 않았습니다.")
     exit(1)
+
 # OpenAI 클라이언트 초기화
 client = OpenAI(api_key=openai_api_key)
+
 # Slack 앱 초기화
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
+
 # 봇 토큰 유효성 검증
 def validate_bot_token():
     try:
@@ -41,8 +50,10 @@ def validate_bot_token():
         logging.error("Error testing Slack Bot Token validity", exc_info=True)
         exit(1)
 validate_bot_token()
+
 # 사용자 대화 히스토리를 저장할 딕셔너리
 user_conversations = {}
+
 def debug_log(message, event=None):
     if event:
         logging.info(f"{message}: {event}")
