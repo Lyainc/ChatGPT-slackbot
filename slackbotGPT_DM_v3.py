@@ -3,6 +3,7 @@ import threading
 import os
 import time
 import openai
+
 from queue import Queue
 from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
@@ -47,16 +48,22 @@ load_dotenv()
 slack_app_token = os.environ.get("SLACK_APP_TOKEN")
 slack_bot_token = os.environ.get("SLACK_BOT_TOKEN")
 slack_signing_secret = os.environ.get("SLACK_SIGNING_KEY")
-openai_api_key = os.environ.get("OPEN_AI_API")
+
+# OpenAI API 키를 저장할 딕셔너리 생성
+openai_api_keys = {key.replace('OPEN_AI_API_', ''): value for key, value in os.environ.items() if key.startswith('OPEN_AI_API_')}
+default_openai_api_key = openai_api_keys.get("DEFAULT")
 
 # 환경 변수 확인
-required_env_vars = [slack_app_token, slack_bot_token, slack_signing_secret, openai_api_key]
+required_env_vars = [slack_app_token, slack_bot_token, slack_signing_secret, default_openai_api_key]
 if not all(required_env_vars):
     logging.error("환경 변수가 올바르게 설정되지 않았습니다.")
     exit(1)
 
-# OpenAI 클라이언트 초기화
-client = OpenAI(api_key=openai_api_key)
+# OpenAI API 키 확인 및 로깅
+for key, value in openai_api_keys.items():
+    if not value:
+        logging.error(f"OpenAI API 키 '{key}'가 설정되지 않았습니다.")
+        exit(1)
 
 # Slack 앱 초기화
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
@@ -106,6 +113,10 @@ def get_user_name(user_id):
     except Exception as e:
         logging.error(f"Error retrieving user name for user_id {user_id}", exc_info=True)
         return None
+
+# 유저 ID에 따른 OpenAI API 키 가져오기
+def get_openai_api_key(user_id):
+    return openai_api_keys.get(user_id, default_openai_api_key)
 
 @app.event("message")
 def handle_dm(event, say):
@@ -229,12 +240,17 @@ def handle_dm(event, say):
 
 def get_openai_response(user_id, thread_ts, model_name):
     try:
+        
+        # 유저별 OpenAI API 키 가져오기 및 클라이언트 초기화
+        api_key = get_openai_api_key(user_id)
+        openai_client = OpenAI(api_key=api_key)
+        
         # Slack API로부터 User Name을 가져옵니다.
         user_name = get_user_name(user_id)
 
         if not user_name:
             raise Exception("User name could not be retrieved.")
-        completion = client.chat.completions.create(
+        completion = openai_client.chat.completions.create(
             model=model_name,
             messages=user_conversations[user_id][thread_ts],
             user=user_name  # 실제 사용자를 식별할 수 있도록 user_name 추가
