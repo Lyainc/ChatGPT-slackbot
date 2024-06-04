@@ -255,9 +255,6 @@ def get_openai_response(user_id, thread_ts, model_name):
 
         if not user_name:
             raise Exception("User name could not be retrieved.")
-        
-        # 대화 내역 가져오기 및 로그 출력
-        received_message = user_conversations[user_id][thread_ts][-1]["content"]
 
         completion = openai_client.chat.completions.create(
             model=model_name,
