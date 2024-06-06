@@ -1,11 +1,12 @@
 import logging
 import threading
 import time
+import sys
 
 from slack_bolt import App
 from src.config import prompt
 from src.tokenizer import count_token_usage, calculate_token_per_price
-from src.utils import get_user_name, send_waiting_message, safe_shutdown
+from src.utils import get_user_name, send_waiting_message
 from src.openai_utils import get_openai_response, user_conversations, user_conversations_lock
 from src.config import slack_bot_token, slack_signing_secret
 
@@ -15,7 +16,7 @@ app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
 # Initialize start_time at the beginning of the script
 start_time = time.time()    
-    
+
 def validate_bot_token():
     try:
         auth_response = app.client.auth_test()
@@ -34,7 +35,7 @@ def handle_dm(event, say):
     
     logging.info("Received an event")  # Logging the event receipt
     stop_event = threading.Event()  # Initialize stop_event at the beginning
-    
+
     try:
         if event.get("channel_type") != "im":
             logging.info("Event is not a direct message. Ignoring.")
@@ -47,7 +48,7 @@ def handle_dm(event, say):
         user_name = get_user_name(app, user_id)
         
         if not user_name:
-            say(text="*[ERROR: Failed to fetch user name. Please try again later.]*", thread_ts=thread_ts)
+            say(text="_사용자 이름을 가져오지 못했습니다._", thread_ts=thread_ts)
             return
         logging.info(f"Received message: {user_message}")
         
@@ -56,7 +57,7 @@ def handle_dm(event, say):
             
             logging.info(f"Extracted question: {question}")
             
-            say(text="*[INFO: 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다.]*", thread_ts=thread_ts)
+            say(text="_INFO: 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)
             
             with user_conversations_lock:
                 if user_id not in user_conversations:
@@ -86,7 +87,7 @@ def handle_dm(event, say):
             waiting_message_thread.join()
             
             question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
-            expected_price = calculate_token_per_price(question, answer, model_name)
+            expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
             
             say(text=answer, thread_ts=thread_ts)
             logging.info(f"Response sent: {answer}")
@@ -97,17 +98,20 @@ def handle_dm(event, say):
         elif user_message == "//대화종료":
             if user_id in user_conversations and thread_ts in user_conversations[user_id]:
                 del user_conversations[user_id][thread_ts]
-            say(text="*[INFO: 대화를 종료합니다.]*", thread_ts=thread_ts)
+            say(text="_대화를 종료합니다._", thread_ts=thread_ts)
             logging.info(f"Ended conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
         
-        elif user_message == "//세션종료":
-            say(text="*[INFO: 슬랙봇의 전체 세션을 종료합니다.]*", thread_ts=thread_ts)
-            if 'start_time' in globals():
-                total_runtime = time.time() - start_time
-                safe_shutdown(user_name, user_id, start_time, stop_event)
-            else:
-                logging.warning("Start time not initialized; session might not have started properly.")        
-                    
+        # elif user_message == "//세션종료":
+        #     say(text="_INFO: 슬랙봇의 전체 세션을 종료합니다._", thread_ts=thread_ts)
+        #     try:
+        #         if 'start_time' in globals():
+        #             safe_shutdown(user_name, user_id, start_time, stop_event)
+        #         else:
+        #             logging.warning("Start time not initialized; session might not have started properly.")
+        #     except Exception as e:
+        #         logging.error(f"An error occurred during shutdown: {e}")
+        #     sys.exit(0)
+            
         elif "thread_ts" in event:
             with user_conversations_lock:
                 if user_id not in user_conversations:
@@ -119,7 +123,7 @@ def handle_dm(event, say):
                     
                 user_conversations[user_id][thread_ts].append({"role": "user", "content": user_message})
                 
-            say(text="*[INFO: 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다.]*", thread_ts=thread_ts)
+            say(text="_질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)
             logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
             logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
             
@@ -139,7 +143,7 @@ def handle_dm(event, say):
             waiting_message_thread.join()
             
             question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
-            expected_price = calculate_token_per_price(question, answer, model_name)
+            expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
             
             say(text=answer, thread_ts=thread_ts)
             logging.info(f"Response sent: {answer}")

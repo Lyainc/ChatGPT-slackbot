@@ -2,9 +2,7 @@ import sys
 import time
 import logging
 from slack_bolt import App
-from datetime
 import threading
-
 
 def get_user_name(app: App, user_id: str) -> str:
     try:
@@ -22,28 +20,32 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, delay_seconds=0
         stop_event.wait(5)
         if not stop_event.is_set():
             try:
-                say(text=f"*[INFO: ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요.]* \n_>>> 대기시간: {delay_seconds} sec..._", thread_ts=thread_ts, channel=channel_id)
+                say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n>>> 대기시간: {delay_seconds} sec...", thread_ts=thread_ts, channel=channel_id)
             except Exception as e:
-                logging.error("Error sending waiting message", exc_info=True)
-                
-def safe_shutdown(user_name, user_id, start_time, stop_event):
-    # 로그 정보를 출력하는 포맷 수정
-    logging.info(f"Session ended by user: {user_name} (ID: {user_id})")
+                logging.error("Error sending waiting message", exc_info=True)                
 
-    if start_time:
-        total_runtime = time.time() - start_time
-        logging.info(f"Total session runtime: {total_runtime:.2f} seconds")
-    else:
-        logging.warning("Start time not initialized; session might not have started properly.")
+# def safe_shutdown(user_name, user_id, start_time, stop_event):
+#     # Log 정보 출력
+#     logging.info(f"Session ended by user: {user_name} (ID: {user_id})")
+    
+#     # 실행 시간 계산 및 출력
+#     if start_time:
+#         total_runtime = time.time() - start_time
+#         logging.info(f"Total session runtime: {total_runtime:.2f} seconds")
+#     else:
+#         logging.warning("Start time not initialized; session might not have started properly.")
+    
+#     # 스탑 이벤트 설정
+#     if stop_event:
+#         stop_event.set()
+#     else:
+#         logging.error("Stop event is not defined; there might be issues stopping waiting threads")
+    
+#     # 남아있는 스레드를 종료
+#     current_thread = threading.current_thread()
+#     for thread in threading.enumerate():
+#         if thread is not current_thread:
+#             thread.join()
 
-    # Set the stop event to make sure any waiting thread is notified
-    stop_event.set()
-
-    # Join any remaining threads to ensure clean exit
-    current_thread = threading.current_thread()
-    for thread in threading.enumerate():
-        if thread is not current_thread:
-            thread.join()
-
-    logging.info("All threads have been successfully joined. Exiting the process with sys.exit(0)")
-    sys.exit(0)
+#     logging.info("All threads have been successfully joined. Exiting the process with sys.exit(0)")
+#     sys.exit(0)
