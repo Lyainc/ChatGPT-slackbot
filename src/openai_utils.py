@@ -1,6 +1,7 @@
 import openai
 import threading
 import logging
+import asyncio
 from openai import OpenAI
 
 user_conversations = {}
@@ -11,7 +12,7 @@ from .config import openai_api_keys, default_openai_api_key
 def get_openai_api_key(user_id):
     return openai_api_keys.get(user_id, default_openai_api_key)
 
-def get_openai_response(user_id, thread_ts, model_name):
+async def get_openai_response(user_id, thread_ts, model_name):
     try:
         api_key = get_openai_api_key(user_id)
         openai_client = OpenAI(api_key=api_key)
