@@ -16,6 +16,9 @@ app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 # Initialize start_time at the beginning of the script
 
 def validate_bot_token():
+    """
+    Slack Bot 토큰의 유효성을 검사합니다.
+    """
     try:
         auth_response = app.client.auth_test()
         if not auth_response["ok"]:
@@ -25,10 +28,11 @@ def validate_bot_token():
     except Exception as e:
         logging.error("Error testing Slack Bot Token validity", exc_info=True)
         exit(1)
-
 validate_bot_token()
 
-def process_message(user_id, user_name, thread_ts, user_message, say, channel_id):
+def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id):
+    question = user_message.replace("//대화시작", "").strip()
+    logging.info(f"Extracted question: {question}")
     with user_conversations_lock:
         if user_id not in user_conversations:
             user_conversations[user_id] = {}
@@ -48,7 +52,6 @@ def process_message(user_id, user_name, thread_ts, user_message, say, channel_id
     waiting_thread.start()
 
     model_name = "gpt-4o-2024-05-13"
-    question = user_conversations[user_id][thread_ts][-1]["content"]
     answer = get_openai_response(user_id, thread_ts, model_name)
     
     stop_event.set()  # Signal the waiting thread to stop
@@ -56,7 +59,8 @@ def process_message(user_id, user_name, thread_ts, user_message, say, channel_id
     
     end_time = time.time()
     elapsed_time_ms = (end_time - start_time) * 1000
-
+    
+    question = user_conversations[user_id][thread_ts][-1]["content"]
     question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
     expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
     
@@ -67,7 +71,7 @@ def process_message(user_id, user_name, thread_ts, user_message, say, channel_id
     logging.info(f"Expected Price: $ {expected_price:.4f}")
 
 @app.event("message")
-def handle_dm(event, say):
+def handle_message_event(event, say):
     
     logging.info("Received an event")  # Logging the event receipt
     
@@ -88,43 +92,18 @@ def handle_dm(event, say):
         logging.info(f"Received message: {user_message}")
         
         if user_message.startswith("//대화시작"):
-            question = user_message.replace("//대화시작", "").strip()
-            
-            logging.info(f"Extracted question: {question}")
-            
             say(text="_대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)
-            
-            process_message(user_id, user_name, thread_ts, user_message, say, channel_id)
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
 
         elif user_message == "//대화종료":
             with user_conversations_lock:
                 if user_id in user_conversations and thread_ts in user_conversations[user_id]:
                     del user_conversations[user_id][thread_ts]
-
                 say(text="_대화를 종료합니다._", thread_ts=thread_ts)
                 logging.info(f"Ended conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
         elif "thread_ts" in event:
             say(text="_이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)   
-            process_message(user_id, user_name, thread_ts, user_message, say, channel_id)
-   
-            start_time = time.time()
-
-            model_name = "gpt-4o-2024-05-13"
-            question = user_conversations[user_id][thread_ts][-1]["content"]
-            answer = get_openai_response(user_id, thread_ts, model_name)
-            
-            end_time = time.time()
-            elapsed_time_ms = (end_time - start_time) * 1000
-
-            question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
-            expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
-            
-            say(text=answer, thread_ts=thread_ts)
-            logging.info(f"Response sent: {answer}")
-            logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms")
-            logging.info(f"Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens}")
-            logging.info(f"Expected Price: $ {expected_price:.4f}")
-      
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)()
