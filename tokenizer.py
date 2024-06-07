@@ -9,11 +9,14 @@ def get_tokenizer(model_name):
         raise
 
 def count_token_usage(question, answer, model_name):
-    tokenizer = get_tokenizer(model_name)
-    # 질문과 답변을 토큰화합니다.
-    question_tokens = tokenizer.encode(question)
-    answer_tokens = tokenizer.encode(answer)
-    return len(question_tokens), len(answer_tokens)
+    try:
+        tokenizer = get_tokenizer(model_name)
+        # 질문과 답변을 토큰화합니다.
+        question_tokens = tokenizer.encode(question)
+        answer_tokens = tokenizer.encode(answer)
+        return len(question_tokens), len(answer_tokens)
+    except Exception as e:
+        print(e)
 
 # def calculate_token_per_price(question, answer, model_name):
 #     question_token, answer_token = count_token_usage(question=question, answer=answer, model_name=model_name)

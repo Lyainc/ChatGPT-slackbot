@@ -1,18 +1,18 @@
+import time
 import openai
 import threading
 import logging
-import asyncio
 from openai import OpenAI
 
 user_conversations = {}
 user_conversations_lock = threading.Lock()
 
-from .config import openai_api_keys, default_openai_api_key
+from config import openai_api_keys, default_openai_api_key
 
 def get_openai_api_key(user_id):
     return openai_api_keys.get(user_id, default_openai_api_key)
 
-async def get_openai_response(user_id, thread_ts, model_name):
+def get_openai_response(user_id, thread_ts, model_name):
     try:
         api_key = get_openai_api_key(user_id)
         openai_client = OpenAI(api_key=api_key)
@@ -22,12 +22,13 @@ async def get_openai_response(user_id, thread_ts, model_name):
         
         with user_conversations_lock:
             messages = user_conversations[user_id][thread_ts]
-
-        completion = openai_client.chat.completions.create(
-            model=model_name,
-            messages=messages
-        )
-
+            start_time = time.time()
+            completion = openai_client.chat.completions.create(
+                model=model_name,
+                messages=messages
+            )
+            end_time = time.time()
+        print((end_time - start_time) * 1000)
         return completion.choices[0].message.content.strip()
     except openai.RateLimitError:
         logging.error("Rate limit exceeded:", exc_info=True)

@@ -2,19 +2,19 @@ import logging
 import sys
 import os
 import asyncio
-from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
+from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from .logger import stop_listener
-from .config import slack_app_token
-from .slack_events import app
+from logger import stop_listener
+from config import slack_app_token
+from slack_events import app
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-async def start_bot():
+def start_bot():
     try:
         logging.info("Starting Slack bot")
-        handler = AsyncSocketModeHandler(app, app_token=slack_app_token)
-        await handler.start_async()
+        handler = SocketModeHandler(app, app_token=slack_app_token)
+        handler.start()
     except Exception as e:
         logging.error("Error starting Slack app:", exc_info=True)
 

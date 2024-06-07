@@ -1,12 +1,10 @@
-import sys
 import time
 import logging
-from slack_bolt.async_app import AsyncApp
-import asyncio
+from slack_bolt.app import App
 
-async def get_user_name(app: AsyncApp, user_id: str) -> str:
+def get_user_name(app: App, user_id: str) -> str:
     try:
-        user_info = await app.client.users_info(user=user_id)
+        user_info = app.client.users_info(user=user_id)
         if user_info["ok"]:
             return user_info["user"]["real_name"]
         logging.error(f"Error fetching user info for user_id {user_id}: {user_info['error']}")
@@ -14,15 +12,16 @@ async def get_user_name(app: AsyncApp, user_id: str) -> str:
         logging.error(f"Error retrieving user name for user_id {user_id}", exc_info=True)
     return None
 
-async def send_waiting_message(say, thread_ts, channel_id, stop_event, delay_seconds=0):
-    while not stop_event.is_set():
+def send_waiting_message(say, thread_ts, channel_id, stop_event, delay_seconds=0):
+    while stop_event.is_set():
         delay_seconds += 5  # Increase delay by 5 seconds each loop
-        await asyncio.sleep(5)
-        if not stop_event.is_set():
+        time.sleep(5)
+        if stop_event.is_set():
             try:
-                await say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n>>> 대기시간: {delay_seconds} sec...", thread_ts=thread_ts, channel=channel_id)
+                say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n>>> 대기시간: {delay_seconds} sec...", thread_ts=thread_ts, channel=channel_id)
             except Exception as e:
                 logging.error("Error sending waiting message", exc_info=True)                
+    return
 
 # def safe_shutdown(user_name, user_id, start_time, stop_event):
 #     # Log 정보 출력

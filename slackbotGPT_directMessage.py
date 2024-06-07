@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from tokenizer import count_token_usage
 
-
 # Constants
 WAITING_MESSAGE_DELAY = 5  # seconds
 
