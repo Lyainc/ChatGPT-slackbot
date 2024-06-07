@@ -1,4 +1,3 @@
-import time
 import openai
 import threading
 import logging
@@ -22,13 +21,10 @@ def get_openai_response(user_id, thread_ts, model_name):
         
         with user_conversations_lock:
             messages = user_conversations[user_id][thread_ts]
-            start_time = time.time()
             completion = openai_client.chat.completions.create(
                 model=model_name,
                 messages=messages
             )
-            end_time = time.time()
-        print((end_time - start_time) * 1000)
         return completion.choices[0].message.content.strip()
     except openai.RateLimitError:
         logging.error("Rate limit exceeded:", exc_info=True)
