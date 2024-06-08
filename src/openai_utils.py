@@ -13,7 +13,6 @@ def get_openai_response(user_id, thread_ts, model_name):
         if api_key:
             openai_client = openai.OpenAI(api_key=api_key)
             masked_api_key = '-'.join(api_key.split('-')[:3])
-
             logging.info(f"Using OpenAI API Key(Masked): {masked_api_key}...")
             
             with user_conversations_lock:

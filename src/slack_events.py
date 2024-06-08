@@ -34,46 +34,43 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     
     model_name = "gpt-4o-2024-05-13"
     
-    if get_openai_response(user_id, thread_ts, model_name) != None:
-        with user_conversations_lock:
-            if user_id not in user_conversations:
-                user_conversations[user_id] = {}
-            if thread_ts not in user_conversations[user_id]:
-                user_conversations[user_id][thread_ts] = [
-                    {"role": "system", "content": prompt}
-                ]
-            
-            user_conversations[user_id][thread_ts].append({"role": "user", "content": user_message})
-            question = user_conversations[user_id][thread_ts][-1]["content"]
-            tokenized_question = question_tokenizer(question)
-            
-        logging.info(f"Extracted question(Tokenized): {tokenized_question}")
-        logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
-        logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")  
+    with user_conversations_lock:
+        if user_id not in user_conversations:
+            user_conversations[user_id] = {}
+        if thread_ts not in user_conversations[user_id]:
+            user_conversations[user_id][thread_ts] = [
+                {"role": "system", "content": prompt}
+            ]
         
-        start_time = time.time()
-        stop_event = Event()
-        waiting_thread = Thread(target=send_waiting_message, args=(say, thread_ts, channel_id, stop_event, WAITING_MESSAGE_DELAY))
-        waiting_thread.start()
+        user_conversations[user_id][thread_ts].append({"role": "user", "content": user_message})
+        question = user_conversations[user_id][thread_ts][-1]["content"]
+        tokenized_question = question_tokenizer(question)
         
-        answer = get_openai_response(user_id, thread_ts, model_name)
-        
-        stop_event.set()  # Signal the waiting thread to stop
-        waiting_thread.join()
-        
-        end_time = time.time()
-        elapsed_time_ms = (end_time - start_time) * 1000
-        
-        question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
-        expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
-        
-        say(text=answer, thread_ts=thread_ts)
-        logging.info(f"Response sent: {answer}")
-        logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms")
-        logging.info(f"Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens}")
-        logging.info(f"Expected Price: $ {expected_price:.4f}")
-    else:
-        say(text="_인증되지 않은 사용자입니다. 담당자에게 문의하세요._", thread_ts=thread_ts)
+    logging.info(f"Extracted question(Tokenized): {tokenized_question}")
+    logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
+    logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")  
+    
+    start_time = time.time()
+    stop_event = Event()
+    waiting_thread = Thread(target=send_waiting_message, args=(say, thread_ts, channel_id, stop_event, WAITING_MESSAGE_DELAY))
+    waiting_thread.start()
+    
+    answer = get_openai_response(user_id, thread_ts, model_name)
+    
+    stop_event.set()  # Signal the waiting thread to stop
+    waiting_thread.join()
+    
+    end_time = time.time()
+    elapsed_time_ms = (end_time - start_time) * 1000
+    
+    question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
+    expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
+    
+    say(text=answer, thread_ts=thread_ts)
+    logging.info(f"Response sent: {answer}")
+    logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms")
+    logging.info(f"Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens}")
+    logging.info(f"Expected Price: $ {expected_price:.4f}")
 
 @app.event("message")
 def handle_message_event(event, say):
