@@ -18,12 +18,12 @@ def count_token_usage(question, answer, model_name):
     except Exception as e:
         print(e)
 
-# def calculate_token_per_price(question, answer, model_name):
-#     question_token, answer_token = count_token_usage(question=question, answer=answer, model_name=model_name)
+def calculate_token_per_price(question, answer, model_name):
+    question_token, answer_token = count_token_usage(question=question, answer=answer, model_name=model_name)
     
-#     if model_name is "gpt-4o-2024-05-13":
-#         total_price = question_token * 0.005 / 1000 + answer_token * 0.005 / 1000
-#     else:
-#         raise Exception("Model is not vaild.")
-#         total_price = 0
-#     return total_price
+    if model_name is "gpt-4o-2024-05-13":
+        total_price = question_token * 0.005 / 1000 + answer_token * 0.005 / 1000
+    else:
+        raise Exception("Model is not vaild.")
+        total_price = 0
+    return total_price

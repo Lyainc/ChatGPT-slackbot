@@ -7,6 +7,11 @@ def get_tokenizer(model_name):
     except Exception as e:
         logging.error(f"Error getting tokenizer for model {model_name}: {e}", exc_info=True)
         raise
+    
+def question_tokenizer(question, model_name):
+    tokenizer = get_tokenizer(model_name)
+    tokenized_question = tokenizer.encode(question)
+    return tokenized_question
 
 def count_token_usage(question, answer, model_name):
     tokenizer = get_tokenizer(model_name)

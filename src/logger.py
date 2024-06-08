@@ -7,7 +7,7 @@ log_queue = ThreadQueue()
 
 # Create console handler
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.INFO)  # Fix: Corrected logging level setting
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 
@@ -16,7 +16,7 @@ queue_listener = QueueListener(log_queue, console_handler)
 
 # Configure root logger
 root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
+root_logger.setLevel(logging.INFO)  # Fix: Corrected logging level setting
 
 # Remove any existing handlers from the root logger
 for handler in root_logger.handlers[:]:

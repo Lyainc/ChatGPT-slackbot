@@ -8,6 +8,7 @@ slack_bot_token = os.getenv("SLACK_BOT_TOKEN")
 slack_signing_secret = os.getenv("SLACK_SIGNING_KEY")
 default_openai_api_key = os.getenv('DEFAULT_OPEN_AI_API_KEY')
 
+
 openai_api_keys = {
     key.replace('OPEN_AI_API_USER_', ''): value 
     for key, value in os.environ.items() 
