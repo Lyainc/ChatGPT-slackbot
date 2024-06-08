@@ -8,6 +8,7 @@ from tokenizer import count_token_usage, calculate_token_per_price
 from utils import get_user_name, send_waiting_message
 from openai_utils import get_openai_response, user_conversations, user_conversations_lock
 from config import slack_bot_token, slack_signing_secret
+# from logger import save_logs
 
 WAITING_MESSAGE_DELAY = 5  # seconds
 
@@ -28,6 +29,7 @@ def validate_bot_token():
     except Exception as e:
         logging.error("Error testing Slack Bot Token validity", exc_info=True)
         exit(1)
+        
 validate_bot_token()
 
 def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id):
@@ -45,7 +47,7 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
         
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")  
-      
+    
     start_time = time.time()
     stop_event = Event()
     waiting_thread = Thread(target=send_waiting_message, args=(say, thread_ts, channel_id, stop_event, WAITING_MESSAGE_DELAY))
@@ -105,5 +107,6 @@ def handle_message_event(event, say):
         elif "thread_ts" in event:
             say(text="_이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
+
     except Exception as e:
-        logging.error("Unexpected error:", exc_info=True)()
+        logging.error("Unexpected error:", exc_info=True)

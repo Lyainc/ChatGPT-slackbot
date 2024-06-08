@@ -1,9 +1,7 @@
 import logging
 import sys
 import os
-import asyncio
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-
 from logger import stop_listener
 from config import slack_app_token
 from slack_events import app
@@ -20,7 +18,7 @@ def start_bot():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(start_bot())
+        start_bot()
     except KeyboardInterrupt:
         logging.info("Bot stopped by user")
     except Exception as e:
