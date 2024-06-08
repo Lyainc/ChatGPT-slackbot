@@ -110,6 +110,15 @@ def handle_message_event(event, say):
 
         elif user_message == "//슬랙봇종료":
             handle_exit_command(user_name)
+            
+        elif user_message == "//답변재생성":
+            with user_conversations_lock:
+                if user_id in user_conversations and thread_ts in user_conversations[user_id] and len(user_conversations[user_id][thread_ts]) > 1:
+                    last_user_message = user_conversations[user_id][thread_ts][-2]["content"]
+                    say(text="_직전 질문에 대한 답변을 다시 생성합니다._", thread_ts=thread_ts)
+                    respond_to_user(user_id, user_name, thread_ts, last_user_message, say, channel_id)
+                else:
+                    say(text="_이전에 입력한 질문이 없습니다._", thread_ts=thread_ts)
         
         elif "thread_ts" in event:
             say(text="_이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)   
