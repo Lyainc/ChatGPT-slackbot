@@ -3,7 +3,8 @@ import threading
 import sys
 from slack_bolt import App
 
-TIMEOUT_INTERVAL = 1800  # 30분
+TIMEOUT_INTERVAL = 36000  # 10시간
+timer = None
 
 def get_user_name(app: App, user_id: str) -> str:
     try:
@@ -17,7 +18,6 @@ def get_user_name(app: App, user_id: str) -> str:
 
 def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_seconds):
     delay_seconds = initial_delay_seconds
-    logging.info("첫 메시지 전송 전 5초 대기")
     stopped = stop_event.wait(delay_seconds)
     if stopped:
         return
@@ -33,19 +33,26 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
         if stopped:
             break
 
+# 타이머 시작 함수
 def start_timer():
+    global timer
     timer = threading.Timer(TIMEOUT_INTERVAL, force_shutdown)
     timer.start()
     return timer
 
-def reset_timer(timer):
-    timer.cancel()
+# 타이머 리셋 함수
+def reset_timer():
+    global timer
+    if timer is not None:
+        timer.cancel()
     return start_timer()
 
+# 강제 종료 함수
 def force_shutdown(*args):
     logging.info("Force shutdown by function")
     sys.exit(0)
-    
+
+# 종료 명령 처리 함수
 def handle_exit_command(user_name):
     logging.info(f"Force shutdown by user: {user_name}")
     sys.exit(0)

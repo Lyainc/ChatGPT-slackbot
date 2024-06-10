@@ -1,7 +1,7 @@
 import openai
 import threading
 import logging
-from config import openai_api_keys
+from src.config.config import openai_api_keys
 
 user_conversations = {}
 user_conversations_lock = threading.Lock()

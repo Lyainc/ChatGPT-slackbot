@@ -2,9 +2,9 @@ import logging
 import sys
 import os
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from logger import stop_listener
-from config import slack_app_token
-from slack_events import app
+from src.utils.logger import stop_listener
+from src.config.config import slack_app_token
+from src.slack.slack_events import app
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
