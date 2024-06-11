@@ -2,7 +2,7 @@ import openai
 import threading
 import logging
 from slack_bolt import App
-from src.config.config import openai_api_keys, default_openai_api_key, slack_bot_token, slack_signing_secret
+from config.config import openai_api_keys, default_openai_api_key, slack_bot_token, slack_signing_secret
 
 user_conversations = {}
 user_conversations_lock = threading.Lock()
@@ -24,7 +24,7 @@ def validate_bot_token():
         logging.error("Error testing Slack Bot Token validity", exc_info=True)
         return "Error testing Slack Bot Token validity"
 
-def get_openai_response(user_id, thread_ts, model_name):
+def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> str:
     try:
         api_key = openai_api_keys.get(user_id)
         

@@ -3,11 +3,11 @@ import time
 
 from threading import Thread, Event
 from slack_bolt.app import App
-from src.config.config import prompt
-from src.utils.tokenizer import count_token_usage, calculate_token_per_price, question_tokenizer
-from src.utils.utils import get_user_name, send_waiting_message, reset_timer, timer, handle_exit_command
-from src.utils.openai_utils import get_openai_response, user_conversations, user_conversations_lock, healthcheck_response
-from src.config.config import slack_bot_token, slack_signing_secret
+from config.config import prompt
+from utils.tokenizer import count_token_usage, calculate_token_per_price, question_tokenizer
+from utils.utils import get_user_name, send_waiting_message, reset_timer, timer, handle_exit_command
+from utils.openai_utils import get_openai_response, user_conversations, user_conversations_lock, healthcheck_response
+from config.config import slack_bot_token, slack_signing_secret
 
 WAITING_MESSAGE_DELAY = 5  # seconds
 

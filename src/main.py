@@ -7,9 +7,9 @@ import os
 # sys.path.append(os.path.join(current_dir, '../../'))
 
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from src.utils.logger import stop_listener
-from src.config.config import slack_app_token
-from src.slack.slack_events import app
+from utils.logger import stop_listener
+from config.config import slack_app_token
+from slack.slack_events import app
 
 def start_bot():
     try:
