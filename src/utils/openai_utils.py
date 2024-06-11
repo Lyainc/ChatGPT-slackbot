@@ -33,4 +33,4 @@ def get_openai_response(user_id, thread_ts, model_name):
         return "Server rate limit exceeded. Please try again later."
     except Exception as e:
         logging.error("Error generating OpenAI response:", exc_info=True)
-        return "An error occurred. Please try again."
+        return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."

@@ -23,7 +23,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
         return
     while not stop_event.is_set():
         try:
-            say(text=f"ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요. \n>> 대기시간: {delay_seconds} sec...",
+            say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
                 thread_ts=thread_ts, channel=channel_id)
             logging.info(f"Waiting message sent successfully (대기시간: {delay_seconds} sec)")
         except Exception as e:
