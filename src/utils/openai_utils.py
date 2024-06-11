@@ -1,10 +1,14 @@
 import openai
 import threading
 import logging
-from src.config.config import openai_api_keys
+from slack_bolt import App
+from src.config.config import openai_api_keys, default_openai_api_key, slack_bot_token, slack_signing_secret
+from slack_sdk.errors import SlackApiError
 
 user_conversations = {}
 user_conversations_lock = threading.Lock()
+
+app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
 def get_openai_response(user_id, thread_ts, model_name):
     try:
@@ -34,3 +38,37 @@ def get_openai_response(user_id, thread_ts, model_name):
     except Exception as e:
         logging.error("Error generating OpenAI response:", exc_info=True)
         return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."
+
+def check_openai_and_slack_api():
+    """
+    OpenAI API 및 Slack API의 유효성을 검사하고 각각의 상태를 반환합니다.
+    """
+    # OpenAI API 유효성 검사
+    openai_status = "OpenAI API is operational."
+    try:
+        openai_client = openai.OpenAI(api_key=default_openai_api_key)
+        models = openai_client.models.list()  # 단순 헬스 체크 요청 (예: 모델 목록 가져오기)
+        if "error" in models:
+            openai_status = "OpenAI API is not operational."
+    except Exception as e:
+        logging.error("Error testing OpenAI API", exc_info=True)
+        openai_status = "OpenAI API is not operational."
+
+    # Slack API 유효성 검사
+    slack_status = "Slack API is operational."
+    try:
+        auth_response = app.client.auth_test()
+        if not auth_response["ok"]:
+            slack_status = f"Slack API is not operational: {auth_response['error']}"
+    except Exception as e:
+        logging.error("Error testing Slack API", exc_info=True)
+        slack_status = "Slack API is not operational."
+
+    return slack_status, openai_status
+
+def healthcheck_response():
+    """
+    Slack과 OpenAI API의 헬스체크를 수행하고 결과를 반환합니다.
+    """
+    slack_status, openai_status = check_openai_and_slack_api()
+    return f"*Health Check Results:*\n- {slack_status}\n- {openai_status}"
