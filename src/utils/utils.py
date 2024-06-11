@@ -33,6 +33,31 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
         if stopped:
             break
 
+# def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_seconds):
+#     delay_seconds = initial_delay_seconds
+#     stopped = stop_event.wait(delay_seconds)
+#     if stopped:
+#         return
+
+#     # 맨 처음 보내는 메시지
+#     initial_message = say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
+#                           thread_ts=thread_ts, channel=channel_id)
+    
+#     message_ts = initial_message['ts']  # 첫 메시지의 timestamp를 저장
+
+#     while not stop_event.is_set():
+#         try:
+#             say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
+#                 thread_ts=thread_ts, channel=channel_id, ts=message_ts)
+#             logging.info(f"Waiting message updated successfully (대기시간: {delay_seconds} sec)")
+#         except Exception as e:
+#             logging.error("Error updating waiting message", exc_info=True)
+        
+#         delay_seconds += 5
+#         stopped = stop_event.wait(5)
+#         if stopped:
+#             break
+
 # 타이머 시작 함수
 def start_timer():
     global timer

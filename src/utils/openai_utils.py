@@ -10,6 +10,21 @@ user_conversations_lock = threading.Lock()
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
+def validate_bot_token():
+    """
+    Slack Bot 토큰의 유효성을 검사합니다.
+    """
+    try:
+        auth_response = app.client.auth_test()
+        if not auth_response["ok"]:
+            logging.error(f"Error during auth_test: {auth_response['error']}")
+            exit(1)
+        logging.info("Slack Bot Token is valid")
+        return "Slack Bot Token is valid"
+    except Exception as e:
+        logging.error("Error testing Slack Bot Token validity", exc_info=True)
+        return "Error testing Slack Bot Token validity"
+
 def get_openai_response(user_id, thread_ts, model_name):
     try:
         api_key = openai_api_keys.get(user_id)
@@ -50,6 +65,8 @@ def check_openai_and_slack_api():
         models = openai_client.models.list()  # 단순 헬스 체크 요청 (예: 모델 목록 가져오기)
         if "error" in models:
             openai_status = "OpenAI API is not operational."
+        else:
+            logging.info("OpenAI API is operational")
     except Exception as e:
         logging.error("Error testing OpenAI API", exc_info=True)
         openai_status = "OpenAI API is not operational."
@@ -60,6 +77,8 @@ def check_openai_and_slack_api():
         auth_response = app.client.auth_test()
         if not auth_response["ok"]:
             slack_status = f"Slack API is not operational: {auth_response['error']}"
+        else:
+            logging.info(f"Slack API is operational")
     except Exception as e:
         logging.error("Error testing Slack API", exc_info=True)
         slack_status = "Slack API is not operational."
@@ -71,4 +90,5 @@ def healthcheck_response():
     Slack과 OpenAI API의 헬스체크를 수행하고 결과를 반환합니다.
     """
     slack_status, openai_status = check_openai_and_slack_api()
-    return f"*Health Check Results:*\n- {slack_status}\n- {openai_status}"
+    slack_bot_token_status = validate_bot_token()
+    return f"*Health Check Results:*\n- {slack_bot_token_status}\n- {openai_status}\n- {slack_status}"

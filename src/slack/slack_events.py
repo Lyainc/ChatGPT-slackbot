@@ -14,22 +14,6 @@ WAITING_MESSAGE_DELAY = 5  # seconds
 # Initialize start_time at the beginning of the script
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
-def validate_bot_token():
-    """
-    Slack Bot 토큰의 유효성을 검사합니다.
-    """
-    try:
-        auth_response = app.client.auth_test()
-        if not auth_response["ok"]:
-            logging.error(f"Error during auth_test: {auth_response['error']}")
-            exit(1)
-        logging.info("Slack Bot Token is valid")
-    except Exception as e:
-        logging.error("Error testing Slack Bot Token validity", exc_info=True)
-        exit(1)
-        
-validate_bot_token()
-
 def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id):
     
     model_name = "gpt-4o-2024-05-13"
@@ -111,28 +95,17 @@ def handle_message_event(event, say):
         elif user_message == "//슬랙봇종료":
             handle_exit_command(user_name)
             
-        elif user_message.startswith("//healthcheck"):
+        elif user_message == "//healthcheck":
             healthcheck_results = healthcheck_response()
             say(text=healthcheck_results, thread_ts=thread_ts)
-            return
-            
-        # elif user_message == "//답변재생성":
-        #     with user_conversations_lock:
-        #         user_threads = user_conversations.get(user_id)
-        #         messages = user_threads.get(thread_ts) if user_threads else None
 
-        #         if not user_threads or not messages or len(messages) <= 1:
-        #             logging.info("No previous messages found for regeneration.")
-        #             say(text="_이전에 입력한 질문이 없습니다._", thread_ts=thread_ts)
-        #         else:
-        #             last_user_message = messages[-2]["content"]
-        #             logging.info(f"Regenerating response for user: {user_name} with message: {last_user_message}")
-        #             say(text="_직전 질문에 대한 답변을 다시 생성합니다._", thread_ts=thread_ts)
-        #             respond_to_user(user_id, user_name, thread_ts, last_user_message, say, channel_id)    
-
-        elif "thread_ts" in event:
+        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작"]:
             say(text="_이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
+            
+        else:
+            logging.error("Cannot read conversation: ", exc_info=True)
+            say(text="_ChatGPT가 대화를 인식하지 못했습니다._", thread_ts=thread_ts)
 
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
