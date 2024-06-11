@@ -111,19 +111,19 @@ def handle_message_event(event, say):
         elif user_message == "//슬랙봇종료":
             handle_exit_command(user_name)
             
-        elif user_message == "//답변재생성":
-            with user_conversations_lock:
-                user_threads = user_conversations.get(user_id)
-                messages = user_threads.get(thread_ts) if user_threads else None
+        # elif user_message == "//답변재생성":
+        #     with user_conversations_lock:
+        #         user_threads = user_conversations.get(user_id)
+        #         messages = user_threads.get(thread_ts) if user_threads else None
 
-                if not user_threads or not messages or len(messages) <= 1:
-                    logging.info("No previous messages found for regeneration.")
-                    say(text="_이전에 입력한 질문이 없습니다._", thread_ts=thread_ts)
-                else:
-                    last_user_message = messages[-2]["content"]
-                    logging.info(f"Regenerating response for user: {user_name} with message: {last_user_message}")
-                    say(text="_직전 질문에 대한 답변을 다시 생성합니다._", thread_ts=thread_ts)
-                    respond_to_user(user_id, user_name, thread_ts, last_user_message, say, channel_id)    
+        #         if not user_threads or not messages or len(messages) <= 1:
+        #             logging.info("No previous messages found for regeneration.")
+        #             say(text="_이전에 입력한 질문이 없습니다._", thread_ts=thread_ts)
+        #         else:
+        #             last_user_message = messages[-2]["content"]
+        #             logging.info(f"Regenerating response for user: {user_name} with message: {last_user_message}")
+        #             say(text="_직전 질문에 대한 답변을 다시 생성합니다._", thread_ts=thread_ts)
+        #             respond_to_user(user_id, user_name, thread_ts, last_user_message, say, channel_id)    
 
         elif "thread_ts" in event:
             say(text="_이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)   
