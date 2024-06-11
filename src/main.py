@@ -1,12 +1,15 @@
 import logging
 import sys
 import os
+
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# 프로젝트의 루트 디렉토리 경로를 sys.path에 추가합니다.
+# sys.path.append(os.path.join(current_dir, '../../'))
+
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from src.utils.logger import stop_listener
 from src.config.config import slack_app_token
 from src.slack.slack_events import app
-
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 def start_bot():
     try:

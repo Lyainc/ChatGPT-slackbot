@@ -3,7 +3,6 @@ import threading
 import logging
 from slack_bolt import App
 from src.config.config import openai_api_keys, default_openai_api_key, slack_bot_token, slack_signing_secret
-from slack_sdk.errors import SlackApiError
 
 user_conversations = {}
 user_conversations_lock = threading.Lock()

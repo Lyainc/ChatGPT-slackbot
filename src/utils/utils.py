@@ -2,6 +2,8 @@ import logging
 import threading
 import sys
 from slack_bolt import App
+from slack_sdk import WebClient
+from src.config.config import slack_bot_token
 
 TIMEOUT_INTERVAL = 36000  # 10시간
 timer = None
@@ -17,42 +19,60 @@ def get_user_name(app: App, user_id: str) -> str:
     return None
 
 def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_seconds):
+    # Slack 클라이언트 초기화
+    client = WebClient(token=slack_bot_token) 
+    
     delay_seconds = initial_delay_seconds
     stopped = stop_event.wait(delay_seconds)
+    
     if stopped:
         return
+    
+    # 처음으로 메시지를 보낸 후 메시지 타임스탬프를 저장합니다.
+    try:
+        response = say(
+            text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
+            thread_ts=thread_ts,
+            channel=channel_id
+        )
+        message_ts = response['ts']  # 메세지의 타임스탬프를 저장
+        logging.info(f"Waiting message sent successfully (대기시간: {delay_seconds} sec)")
+    except Exception as e:
+        logging.error("Error sending initial waiting message", exc_info=True)
+        return
+    
+    # 이후에는 메시지를 수정합니다.
     while not stop_event.is_set():
-        try:
-            say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
-                thread_ts=thread_ts, channel=channel_id)
-            logging.info(f"Waiting message sent successfully (대기시간: {delay_seconds} sec)")
-        except Exception as e:
-            logging.error("Error sending waiting message", exc_info=True)
         delay_seconds += 5
         stopped = stop_event.wait(5)
         if stopped:
             break
+        
+        try:
+            # 메시지를 수정합니다.
+            client.chat_update(
+                channel=channel_id,
+                ts=message_ts,
+                text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec..."
+            )
+            logging.info(f"Waiting message updated successfully (대기시간: {delay_seconds} sec)")
+        except Exception as e:
+            logging.error("Error updating waiting message", exc_info=True)
+
+
 
 # def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_seconds):
 #     delay_seconds = initial_delay_seconds
 #     stopped = stop_event.wait(delay_seconds)
 #     if stopped:
 #         return
-
-#     # 맨 처음 보내는 메시지
-#     initial_message = say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
-#                           thread_ts=thread_ts, channel=channel_id)
-    
-#     message_ts = initial_message['ts']  # 첫 메시지의 timestamp를 저장
-
 #     while not stop_event.is_set():
 #         try:
 #             say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
-#                 thread_ts=thread_ts, channel=channel_id, ts=message_ts)
-#             logging.info(f"Waiting message updated successfully (대기시간: {delay_seconds} sec)")
+#                 thread_ts=thread_ts, channel=channel_id)
+#             logging.info(f"Waiting message sent successfully (대기시간: {delay_seconds} sec)")
 #         except Exception as e:
-#             logging.error("Error updating waiting message", exc_info=True)
-        
+#             logging.error("Error sending waiting message", exc_info=True)
 #         delay_seconds += 5
 #         stopped = stop_event.wait(5)
 #         if stopped:
