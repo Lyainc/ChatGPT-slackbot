@@ -33,9 +33,9 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
     # 처음으로 메시지를 보낸 후 메시지 타임스탬프를 저장합니다.
     try:
         response = say(
-            text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
+            text=f":soomgo_: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
             thread_ts=thread_ts,
-            channel=channel_id
+            channel=channel_id,
         )
         message_ts = response['ts']  # 메세지의 타임스탬프를 저장
         logging.info(f"Waiting message sent successfully (대기시간: {delay_seconds} sec)")
@@ -55,7 +55,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f"_답변이 완료되었습니다._ \n> 총 소요시간: {elapsed_time_ms:.2f}초"
+                text=f":soomgo_: _답변이 완료되었습니다._ \n> 총 소요시간: {elapsed_time_ms:.2f}초"
             )
             break
         
@@ -64,7 +64,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec..."
+                text=f":soomgo_: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec..."
             )
         except Exception as e:
             logging.error("Error updating waiting message", exc_info=True)
