@@ -50,12 +50,12 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
         stopped = stop_event.wait(5)
         if stopped:
             end_time = time.time()
-            elapsed_time_ms = (end_time - start_time) * 1000
+            elapsed_time_ms = (end_time - start_time)
             # 마지막 메시지 발송.
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f"_답변이 완료되었습니다._ \n> 총 소요시간: {elapsed_time_ms:.2f} ms"
+                text=f"_답변이 완료되었습니다._ \n> 총 소요시간: {elapsed_time_ms:.2f}초"
             )
             break
         
@@ -68,25 +68,6 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
             )
         except Exception as e:
             logging.error("Error updating waiting message", exc_info=True)
-
-
-
-# def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_seconds):
-#     delay_seconds = initial_delay_seconds
-#     stopped = stop_event.wait(delay_seconds)
-#     if stopped:
-#         return
-#     while not stop_event.is_set():
-#         try:
-#             say(text=f"_ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
-#                 thread_ts=thread_ts, channel=channel_id)
-#             logging.info(f"Waiting message sent successfully (대기시간: {delay_seconds} sec)")
-#         except Exception as e:
-#             logging.error("Error sending waiting message", exc_info=True)
-#         delay_seconds += 5
-#         stopped = stop_event.wait(5)
-#         if stopped:
-#             break
 
 # 타이머 시작 함수
 def start_timer():
