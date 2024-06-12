@@ -65,9 +65,9 @@ def check_openai_and_slack_api():
         if "error" in models:
             openai_status = "OpenAI API is not operational."
         else:
-            logging.info("OpenAI API is operational")
+            logging.info("Healthcheck: OpenAI API is operational")
     except Exception as e:
-        logging.error("Error testing OpenAI API", exc_info=True)
+        logging.error("Healthcheck: rror testing OpenAI API", exc_info=True)
         openai_status = "OpenAI API is not operational."
 
     # Slack API 유효성 검사
@@ -77,9 +77,9 @@ def check_openai_and_slack_api():
         if not auth_response["ok"]:
             slack_status = f"Slack API is not operational: {auth_response['error']}"
         else:
-            logging.info(f"Slack API is operational")
+            logging.info(f"Healthcheck: Slack API is operational")
     except Exception as e:
-        logging.error("Error testing Slack API", exc_info=True)
+        logging.error("Healthcheck: Error testing Slack API", exc_info=True)
         slack_status = "Slack API is not operational."
 
     return slack_status, openai_status

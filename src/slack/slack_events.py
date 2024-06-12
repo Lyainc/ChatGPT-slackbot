@@ -56,6 +56,39 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     logging.info(f"Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens}")
     logging.info(f"Expected Price: $ {expected_price:.4f}")
 
+def read_coversation_history(channel_id, thread_ts):
+    conversation = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
+    messages = conversation.get("messages", [])
+    return messages
+
+def recognize_conversation(user_id, thread_ts, channel_id, say):
+    conversation_history = read_coversation_history(channel_id, thread_ts)
+    
+    try:
+        with user_conversations_lock:
+        # 대화 딕셔너리 조회 및 생성
+            if user_id not in user_conversations:
+                user_conversations[user_id] = {}
+            
+            user_conversations[user_id][thread_ts] = []
+            
+            for message in conversation_history:
+                
+                if message["text"].startswith("//"):
+                    continue
+                
+                if message["user"] == user_id:
+                    role = "user"
+                else:
+                    role = "assistant" if message["user"] == "U076EJQTPNC" else "system"
+                    
+                user_conversations[user_id][thread_ts].append({
+                    "role": role,
+                    "content": message["text"]
+                })
+    except Exception as e:
+        logging.error("Unexpected error:", exc_info=True)
+        
 @app.event("message")
 def handle_message_event(event, say):
     
@@ -84,7 +117,27 @@ def handle_message_event(event, say):
             user_message = user_message.replace("//대화시작", "").strip()
             say(text="_대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
+            logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
+        elif user_message =="//대화인식":
+            if thread_ts in user_conversations.get(user_id, {}):
+                say("_이미 존재하는 쓰레드입니다. 기존 대화 이력을 삭제하시겠습니까? (//YES | //NO)_", thread_ts=thread_ts)
+                logging.info("Already exist thread.")
+            else:
+                recognize_conversation(user_id, thread_ts, channel_id, say)
+                say("_기존 대화 이력을 인식했습니다._", thread_ts=thread_ts)
+                logging.info(f"Recognized thread history for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
+
+        elif user_message.upper() == "YES" and thread_ts in user_conversations:
+            with user_conversations_lock:
+                del user_conversations[user_id][thread_ts]
+            say("_대화 이력이 삭제되었습니다._", thread_ts=thread_ts)
+            logging.info(f"Thread history delete for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
+            
+        elif user_message.upper() == "NO":
+            say("_작업을 종료합니다._", thread_ts=thread_ts)
+            logging.info(f"Canceled thread history delete.")
+            
         elif user_message == "//대화종료":
             with user_conversations_lock:
                 if user_id in user_conversations and thread_ts in user_conversations[user_id]:
@@ -99,7 +152,7 @@ def handle_message_event(event, say):
             healthcheck_results = healthcheck_response()
             say(text=healthcheck_results, thread_ts=thread_ts)
 
-        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작"]:
+        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작", "//대화인식", "//YES", "//NO"]:
             say(text="_이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
             
