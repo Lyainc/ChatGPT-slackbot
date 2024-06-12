@@ -107,7 +107,7 @@ def handle_message_event(event, say):
         user_name = get_user_name(app, user_id)
 
         if not user_name:
-            say(text=":soomgo_: _사용자 이름을 가져오지 못했습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
+            say(text=":bookmark: _사용자 이름을 가져오지 못했습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
             return
         
         logging.info(f"Received message: {user_message}")
@@ -115,51 +115,37 @@ def handle_message_event(event, say):
         
         if user_message.startswith("//대화시작"):
             user_message = user_message.replace("//대화시작", "").strip()
-            say(text=":soomgo_: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
+            say(text=":bookmark: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
-        elif user_message =="//대화인식":
-            if thread_ts in user_conversations.get(user_id, {}):
-                say(":soomgo_: _이미 존재하는 쓰레드입니다. 기존 대화 이력을 삭제하시겠습니까? (//YES | //NO)_", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
-                logging.info("Already exist thread.")
-            else:
-                recognize_conversation(user_id, thread_ts, channel_id)
-                say(":soomgo_: _기존 대화 이력을 인식했습니다._", thread_ts=thread_ts)
-                logging.info(f"Recognized thread history for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
-                logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
-
-        elif user_message.upper() == "YES" and thread_ts in user_conversations:
-            with user_conversations_lock:
-                del user_conversations[user_id][thread_ts]
-            say(":soomgo_: _대화 이력이 삭제되었습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
-            logging.info(f"Thread history delete for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
-            
-        elif user_message.upper() == "NO":
-            say(":soomgo_: _작업을 종료합니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
-            logging.info(f"Canceled thread history delete.")
+        elif user_message == "//대화인식":
+            recognize_conversation(user_id, thread_ts, channel_id)
+            say(":bookmark: _기존 대화 이력을 인식했습니다._", thread_ts=thread_ts)
+            logging.info(f"Recognized thread history for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
+            logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")                
             
         elif user_message == "//대화종료":
             with user_conversations_lock:
                 if user_id in user_conversations and thread_ts in user_conversations[user_id]:
                     del user_conversations[user_id][thread_ts]
-                say(text=":soomgo_: _대화를 종료합니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
+                say(text=":bookmark: _대화를 종료합니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
                 logging.info(f"Ended conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
         elif user_message == "//슬랙봇종료":
-            handle_exit_command(user_name)
+            handle_exit_command(user_name)    
             
         elif user_message == "//healthcheck":
             healthcheck_results = healthcheck_response()
-            say(text=healthcheck_results, thread_ts=thread_ts)
-
-        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작", "//대화인식", "//YES", "//NO"]:
-            say(text=":soomgo_: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
+            say(text=healthcheck_results, thread_ts=thread_ts)   
+            
+        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작", "//대화인식"]:
+            say(text=":bookmark: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
             
         else:
             logging.error("Cannot read conversation: ", exc_info=True)
-            say(text=":soomgo_: _ChatGPT가 대화를 인식하지 못했습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
+            say(text=":bookmark: _ChatGPT가 대화를 인식하지 못했습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
 
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
