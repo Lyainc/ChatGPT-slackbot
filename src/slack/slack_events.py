@@ -9,7 +9,7 @@ from utils.utils import get_user_name, send_waiting_message, reset_timer, timer,
 from utils.openai_utils import get_openai_response, user_conversations, user_conversations_lock, healthcheck_response
 from config.config import slack_bot_token, slack_signing_secret
 
-WAITING_MESSAGE_DELAY = 5  # seconds
+WAITING_MESSAGE_DELAY = 2  # seconds
 
 # Initialize start_time at the beginning of the script
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
@@ -74,7 +74,7 @@ def recognize_conversation(user_id, thread_ts, channel_id):
             
             for message in conversation_history:
                 
-                if message["text"].startswith("//"):
+                if message["text"].startswith("//") or message["text"].startswith(":bookmark:"):
                     continue
                 
                 if message["user"] == user_id:
@@ -120,8 +120,8 @@ def handle_message_event(event, say):
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
         elif user_message == "//대화인식":
-            recognize_conversation(user_id, thread_ts, channel_id)
             say(":bookmark: _기존 대화 이력을 인식했습니다._", thread_ts=thread_ts)
+            recognize_conversation(user_id, thread_ts, channel_id)
             logging.info(f"Recognized thread history for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
             logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")                
             

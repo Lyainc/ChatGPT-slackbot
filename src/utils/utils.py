@@ -30,41 +30,46 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
     if stopped:
         return
     
+    progress_steps = ["[>_________]", "[_>________]", "[__>_______]", "[___>______]", "[____>_____]", "[_____>____]", "[______>___]", "[_______>__]", "[________>_]", "[_________>]"]
+    progress_index = 0
+
     # 처음으로 메시지를 보낸 후 메시지 타임스탬프를 저장합니다.
     try:
+        progress_bar = progress_steps[progress_index]
         response = say(
-            text=f":soomgo_: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec...",
+            text=f":bookmark: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ | {progress_bar}",
             thread_ts=thread_ts,
             channel=channel_id,
         )
-        message_ts = response['ts']  # 메세지의 타임스탬프를 저장
-        logging.info(f"Waiting message sent successfully (대기시간: {delay_seconds} sec)")
+        message_ts = response['ts']  # 메시지의 타임스탬프를 저장
+        logging.info(f"Initial waiting message sent successfully")
     except Exception as e:
         logging.error("Error sending initial waiting message", exc_info=True)
         return
-    
+
     # 메시지 수정
     while not stop_event.is_set():
-
-        delay_seconds += 5
-        stopped = stop_event.wait(5)
+        delay_seconds += 2  # 2초 간격으로 변경
+        progress_index = (progress_index + 1) % len(progress_steps)
+        stopped = stop_event.wait(2)
         if stopped:
             end_time = time.time()
-            elapsed_time_ms = (end_time - start_time)
-            # 마지막 메시지 발송.
+            elapsed_time_s = end_time - start_time
+            # 마지막 메시지 발송
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f":soomgo_: _답변이 완료되었습니다._ \n> 총 소요시간: {elapsed_time_ms:.2f}초"
+                text=f":bookmark: _답변이 완료되었습니다. (총 소요시간: {elapsed_time_s:.2f}초)_"
             )
             break
-        
+
         try:
-            # 5초 간격 메시지를 수정합니다.
+            progress_bar = progress_steps[progress_index]
+            # 2초 간격으로 메시지를 수정
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f":soomgo_: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ \n> 대기시간: {delay_seconds} sec..."
+                text=f":bookmark: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ | {progress_bar}"
             )
         except Exception as e:
             logging.error("Error updating waiting message", exc_info=True)
