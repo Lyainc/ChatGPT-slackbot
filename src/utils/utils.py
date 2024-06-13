@@ -37,9 +37,11 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
     try:
         progress_bar = progress_steps[progress_index]
         response = say(
-            text=f":bookmark: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ | {progress_bar}",
+            text=f":bookmark: {progress_bar} _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
             thread_ts=thread_ts,
             channel=channel_id,
+            mrkdwn=True, 
+            icon_emoji=True,            
         )
         message_ts = response['ts']  # 메시지의 타임스탬프를 저장
         logging.info(f"Initial waiting message sent successfully")
@@ -59,7 +61,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f":bookmark: _답변이 완료되었습니다. (총 소요시간: {elapsed_time_s:.2f}초)_"
+                text=f":bookmark: [>>>>>>>>>>] _답변이 완료되었습니다. (총 소요시간: {elapsed_time_s:.2f}초)_",
             )
             break
 
@@ -69,7 +71,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f":bookmark: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._ | {progress_bar}"
+                text=f":bookmark: {progress_bar} _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
             )
         except Exception as e:
             logging.error("Error updating waiting message", exc_info=True)
