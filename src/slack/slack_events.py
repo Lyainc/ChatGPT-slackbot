@@ -52,19 +52,22 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     
     question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
     expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
+    struct_time = time.strptime("2024-06-25 19:59:30", "%Y-%m-%d %H:%M:%S")
+    formatted_time = time.strftime("%Y년 %m월 %d일 %H시 %M분 %S초", struct_time)
     
     # say(text=f":soomgo_: {answer}", 
     #     thread_ts=thread_ts, 
     #     mrkdwn=True, 
     #     icon_emoji=True,
     # )
+    
     say(
         blocks=[
             {
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": ":soomgo_: 답변이 생성되었습니다.",
+                    "text": ":soomgo_:  답변이 생성되었습니다.",
                     "emoji": True
                 }
             },
@@ -86,7 +89,7 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"생성 시간(초) : {elapsed_time_ms * 1000:.2f}"
+                        "text": f":alarm_clock: _생성 시간(초) : {elapsed_time_ms / 1000:.2f} | {user_name}에 의해 {formatted_time}에 생성됨_"
                     }
                 ]
             },
@@ -94,7 +97,7 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
         thread_ts=thread_ts, 
         icon_emoji=True
     )
-   
+    
     logging.info(f"Response sent: {answer}")
     logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms")
     logging.info(f"Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens}")
@@ -122,7 +125,7 @@ def recognize_conversation(user_id, thread_ts, channel_id):
                     message["text"] = message["text"][len("//대화시작"):].strip()
                     continue
                 
-                if message["text"].startswith(":bookmark:") or message["text"].startswith("//"):
+                if message["text"].startswith(":robot_face:") or message["text"].startswith("//"):
                     continue
                 
                 if message["user"] == user_id:
@@ -156,7 +159,7 @@ def handle_message_event(event, say):
 
         if not user_name:
             say(
-                text=":bookmark: _사용자 이름을 가져오지 못했습니다._", 
+                text=":robot_face: _사용자 이름을 가져오지 못했습니다._", 
                 thread_ts=thread_ts, 
                 mrkdwn=True, 
                 icon_emoji=True
@@ -169,7 +172,7 @@ def handle_message_event(event, say):
         if user_message.startswith("//대화시작"):
             user_message = user_message[len("//대화시작"):].strip()
             say(
-                text=":bookmark: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
+                text=":robot_face: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
                 mrkdwn=True, 
                 icon_emoji=True
@@ -178,7 +181,7 @@ def handle_message_event(event, say):
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
         elif user_message == "//대화인식":
-            say(":bookmark: _기존 대화 이력을 인식했습니다._", thread_ts=thread_ts)
+            say(":robot_face: _기존 대화 이력을 인식했습니다._", thread_ts=thread_ts)
             recognize_conversation(user_id, thread_ts, channel_id)
             logging.info(f"Recognized thread history for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
             logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")                
@@ -187,7 +190,7 @@ def handle_message_event(event, say):
             with user_conversations_lock:
                 if user_id in user_conversations and thread_ts in user_conversations[user_id]:
                     del user_conversations[user_id][thread_ts]
-                say(text=":bookmark: _대화를 종료합니다._", 
+                say(text=":robot_face: _대화를 종료합니다._", 
                     thread_ts=thread_ts, 
                     mrkdwn=True, 
                     icon_emoji=True
@@ -202,12 +205,12 @@ def handle_message_event(event, say):
             say(text=healthcheck_results, thread_ts=thread_ts)   
             
         elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작", "//대화인식"]:
-            say(text=":bookmark: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
+            say(text=":robot_face: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
             
         else:
             logging.error("Cannot read conversation: ", exc_info=True)
-            say(text=":bookmark: _ChatGPT가 대화를 인식하지 못했습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
+            say(text=":robot_face: _ChatGPT가 대화를 인식하지 못했습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
 
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
