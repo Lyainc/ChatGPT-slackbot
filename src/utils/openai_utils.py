@@ -40,7 +40,10 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> str:
                 
                 completion = openai_client.chat.completions.create(
                     model=model_name,
-                    messages=messages
+                    messages=messages,
+                    user=user_id,
+                    temperature=1.1,
+                    frequency_penalty = 0.1
                 )
             return completion.choices[0].message.content.strip()
         else:
