@@ -42,7 +42,7 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> str:
                     model=model_name,
                     messages=messages,
                     user=user_id,
-                    temperature=1.1,
+                    temperature=1,
                     frequency_penalty = 0.1
                 )
             return completion.choices[0].message.content.strip()

@@ -40,6 +40,9 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     waiting_thread.start()
     
     answer = get_openai_response(user_id, thread_ts, model_name)
+    answer = answer.replace("**", "*")
+    answer = answer.replace("- ", " - ")
+    answer = answer.replace("###", ">")
     
     stop_event.set()  # Signal the waiting thread to stop
     waiting_thread.join()
@@ -50,12 +53,48 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
     expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
     
-    say(text=f":soomgo_: {answer}", 
+    # say(text=f":soomgo_: {answer}", 
+    #     thread_ts=thread_ts, 
+    #     mrkdwn=True, 
+    #     icon_emoji=True,
+    # )
+    say(
+        blocks=[
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": ":soomgo_: 답변이 생성되었습니다.",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": answer
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"생성 시간(초) : {elapsed_time_ms * 1000:.2f}"
+                    }
+                ]
+            },
+        ],
         thread_ts=thread_ts, 
-        mrkdwn=True, 
         icon_emoji=True
     )
-    
+   
     logging.info(f"Response sent: {answer}")
     logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms")
     logging.info(f"Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens}")

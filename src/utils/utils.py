@@ -55,13 +55,11 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
         progress_index = (progress_index + 1) % len(progress_steps)
         stopped = stop_event.wait(2)
         if stopped:
-            end_time = time.time()
-            elapsed_time_s = end_time - start_time
             # 마지막 메시지 발송
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f":bookmark: [>>>>>>>>>>] _답변이 완료되었습니다. (총 소요시간: {elapsed_time_s:.2f}초)_",
+                text=f":bookmark: [>>>>>>>>>>] _답변이 완료되었습니다._",
             )
             break
 
