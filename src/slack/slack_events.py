@@ -53,8 +53,8 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     
     question_tokens, answer_tokens = count_token_usage(question, answer, model_name)
     expected_price = calculate_token_per_price(question_tokens, answer_tokens, model_name)
-    struct_time = time.strptime("2024-06-25 19:59:30", "%Y-%m-%d %H:%M:%S")
-    formatted_time = time.strftime("%Y년 %m월 %d일 %H시 %M분 %S초", struct_time)
+    current_time = time.localtime()
+    formatted_time = time.strftime("%Y년 %m월 %d일 %H시 %M분 %S초", current_time)
     
     for block in message_blocks:
         say(
@@ -167,7 +167,7 @@ def handle_message_event(event, say):
         if user_message.startswith("//대화시작"):
             user_message = user_message[len("//대화시작"):].strip()
             say(
-                text=f":robot_face: _안녕하세요 {user_name}님! \n대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
+                text=f":robot_face: _안녕하세요 {user_name}님!_ _\n대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
                 mrkdwn=True, 
                 icon_emoji=True

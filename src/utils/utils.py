@@ -9,7 +9,7 @@ from config.config import slack_bot_token
 TIMEOUT_INTERVAL = 36000  # 10시간
 timer = None
 
-def get_user_name(app: App, user_id: str) -> str:
+def get_user_name(app, user_id):
     try:
         user_info = app.client.users_info(user=user_id)
         if user_info["ok"]:
@@ -29,14 +29,34 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
     if stopped:
         return
     
-    progress_steps = ["[>_________]", "[_>________]", "[__>_______]", "[___>______]", "[____>_____]", "[_____>____]", "[______>___]", "[_______>__]", "[________>_]", "[_________>]"]
+    progress_steps = [
+        "[>>__________________]", 
+        "[_>>_________________]", 
+        "[__>>________________]", 
+        "[___>>_______________]", 
+        "[____>>______________]", 
+        "[_____>>_____________]", 
+        "[______>>____________]", 
+        "[_______>>___________]", 
+        "[________>>__________]", 
+        "[_________>>_________]",
+        "[__________>>________]",
+        "[___________>>_______]",
+        "[____________>>______]",
+        "[_____________>>_____]",
+        "[______________>>____]",
+        "[_______________>>___]",
+        "[________________>>__]",
+        "[_________________>>_]",
+        "[__________________>>]",
+        ]
     progress_index = 0
 
     # 처음으로 메시지를 보낸 후 메시지 타임스탬프를 저장합니다.
     try:
         progress_bar = progress_steps[progress_index]
         response = say(
-            text=f":robot_face: {progress_bar} _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
+            text=f"{progress_bar} :robot_face: ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
             thread_ts=thread_ts,
             channel=channel_id,
             mrkdwn=True, 
@@ -58,7 +78,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f":robot_face: [>>>>>>>>>>] _답변이 완료되었습니다._",
+                text=f":robot_face: _답변이 완료되었습니다._",
             )
             break
 
@@ -68,7 +88,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
             client.chat_update(
                 channel=channel_id,
                 ts=message_ts,
-                text=f":robot_face: {progress_bar} _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
+                text=f"{progress_bar} :robot_face: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
             )
         except Exception as e:
             logging.error("Error updating waiting message", exc_info=True)
