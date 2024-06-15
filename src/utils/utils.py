@@ -24,7 +24,6 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
     client = WebClient(token=slack_bot_token) 
     
     delay_seconds = initial_delay_seconds
-    start_time = time.time()
     stopped = stop_event.wait(delay_seconds)
     
     if stopped:

@@ -56,6 +56,26 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> str:
         logging.error("Error generating OpenAI response:", exc_info=True)
         return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."
 
+def split_message_into_blocks(message, max_length=3000):
+    paragraphs = message.split('\n\n')
+    blocks = []
+    current_block = ""
+
+    for paragraph in paragraphs:
+        if len(current_block) + len(paragraph) + 2 <= max_length:
+            if current_block:
+                current_block += '\n\n' + paragraph
+            else:
+                current_block = paragraph
+        else:
+            blocks.append(current_block)
+            current_block = paragraph
+
+    if current_block:
+        blocks.append(current_block)
+    
+    return blocks
+
 def check_openai_and_slack_api():
     """
     OpenAI API 및 Slack API의 유효성을 검사하고 각각의 상태를 반환합니다.
