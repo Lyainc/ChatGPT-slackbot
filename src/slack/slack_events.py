@@ -63,7 +63,7 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": ":soomgo_:  답변이 생성되었습니다.",
+                    "text": ":soomgo_:  생성된 답변",
                     "emoji": True
                 }
             },
@@ -93,7 +93,6 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
         thread_ts=thread_ts, 
         icon_emoji=True
     )
-    
     
     logging.info(f"Response sent: {answer}")
     logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms / Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens} / Expected Price: $ {expected_price:.4f}")
@@ -167,7 +166,7 @@ def handle_message_event(event, say):
         if user_message.startswith("//대화시작"):
             user_message = user_message[len("//대화시작"):].strip()
             say(
-                text=f":robot_face: _안녕하세요 {user_name}님!_ _\n대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
+                text=f":robot_face: _안녕하세요 {user_name}님!_ \n_대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
                 mrkdwn=True, 
                 icon_emoji=True

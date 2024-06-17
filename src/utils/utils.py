@@ -56,7 +56,7 @@ def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_s
     try:
         progress_bar = progress_steps[progress_index]
         response = say(
-            text=f"{progress_bar} :robot_face: ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
+            text=f"{progress_bar} :robot_face: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
             thread_ts=thread_ts,
             channel=channel_id,
             mrkdwn=True, 
