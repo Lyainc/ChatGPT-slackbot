@@ -1,9 +1,10 @@
 import logging
 import time
+import re
 
 from threading import Thread, Event
 from slack_bolt.app import App
-from config.config import prompt
+from config.config import prompt, CoT_prompt
 from utils.tokenizer import count_token_usage, calculate_token_per_price, question_tokenizer
 from utils.utils import get_user_name, send_waiting_message, reset_timer, timer, handle_exit_command
 from utils.openai_utils import get_openai_response, user_conversations, user_conversations_lock, healthcheck_response, split_message_into_blocks
@@ -14,7 +15,7 @@ WAITING_MESSAGE_DELAY = 2  # seconds
 # Initialize start_time at the beginning of the script
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
-def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id):
+def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt):
     
     model_name = "gpt-4o-2024-05-13"
     
@@ -39,9 +40,11 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     waiting_thread.start()
 
     answer = get_openai_response(user_id, thread_ts, model_name)
+
     answer = answer.replace("**", "*")
     answer = answer.replace("- ", " - ")
     answer = answer.replace("###", ">")
+    answer = re.sub(r'\[(.*?)\]\((.*?)\)', r'<\2|\1>', answer) 
     
     message_blocks = split_message_into_blocks(answer)
     
@@ -95,7 +98,7 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     )
     
     logging.info(f"Response sent: {answer}")
-    logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms / Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens} / Expected Price: $ {expected_price:.4f}")
+    logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms / Question Token Count: {question_tokens} / Answer Token Count: {answer_tokens} / Expected Price(incl. Prompt Token): $ {expected_price:.4f}")
 
 def read_coversation_history(channel_id, thread_ts):
     conversation = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
@@ -171,7 +174,7 @@ def handle_message_event(event, say):
                 mrkdwn=True, 
                 icon_emoji=True
             )
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt)
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
         elif user_message == "//대화인식":
@@ -195,6 +198,11 @@ def handle_message_event(event, say):
 
         elif user_message == "//슬랙봇종료":
             handle_exit_command(user_name)    
+          
+        elif user_message.startswith("//cot"):
+            user_message = user_message[len("//cot"):].strip()
+            say(text=":robot_face: _이어지는 질문을 인식했습니다(Chain of Thought). ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, CoT_prompt) 
             
         elif user_message == "//healthcheck":
             healthcheck_results = healthcheck_response()
@@ -202,9 +210,9 @@ def handle_message_event(event, say):
                 thread_ts=thread_ts
             )   
             
-        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작", "//대화인식"]:
+        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작", "//대화인식", "//cot"]:
             say(text=":robot_face: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id)
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt)
             
         else:
             logging.error("Cannot read conversation: ", exc_info=True)

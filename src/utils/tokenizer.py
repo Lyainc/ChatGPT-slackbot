@@ -23,9 +23,10 @@ def count_token_usage(question, answer, model_name):
 def calculate_token_per_price(question_token, answer_token, model_name):
     question_token = question_token
     answer_token = answer_token
+    prompt_token = 424 # Default token count
     try:
         if model_name == "gpt-4o-2024-05-13":
-            total_price = question_token * 0.005 / 1000 + answer_token * 0.005 / 1000
+            total_price = question_token * 0.005 / 1000 + answer_token * 0.005 / 1000 + prompt_token * 0.005 / 1000
     except Exception as e:
             logging.error(f"Model is not vaild : {e}", exc_info=True)
             total_price = 0
