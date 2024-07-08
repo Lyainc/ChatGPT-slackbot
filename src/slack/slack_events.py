@@ -118,11 +118,18 @@ def recognize_conversation(user_id, thread_ts, channel_id):
             
             for message in conversation_history:
                 
+                if message["text"].startswith("!대화시작"):
+                    message["text"] = message["text"][len("!대화시작"):].strip()
+                    continue
+                
                 if message["text"].startswith("//대화시작"):
                     message["text"] = message["text"][len("//대화시작"):].strip()
                     continue
                 
                 if message["text"].startswith(":robot_face:") or message["text"].startswith("//"):
+                    continue
+                
+                if message["text"].startswith(":robot_face:") or message["text"].startswith("!"):
                     continue
                 
                 if message["user"] == user_id:
@@ -166,8 +173,8 @@ def handle_message_event(event, say):
         logging.info(f"Received message: {user_message}")
         timer = reset_timer()
         
-        if user_message.startswith("//대화시작"):
-            user_message = user_message[len("//대화시작"):].strip()
+        if user_message.startswith("!대화시작"):
+            user_message = user_message[len("!대화시작"):].strip()
             say(
                 text=f":robot_face: _안녕하세요 {user_name}님!_ \n_대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
@@ -177,7 +184,7 @@ def handle_message_event(event, say):
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt)
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
-        elif user_message == "//대화인식":
+        elif user_message == "!대화인식":
             say(":robot_face: _기존 대화 이력을 인식했습니다._", 
                 thread_ts=thread_ts
             )
@@ -185,7 +192,7 @@ def handle_message_event(event, say):
             logging.info(f"Recognized thread history for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
             logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")                
             
-        elif user_message == "//대화종료":
+        elif user_message == "!대화종료":
             with user_conversations_lock:
                 if user_id in user_conversations and thread_ts in user_conversations[user_id]:
                     del user_conversations[user_id][thread_ts]
@@ -196,21 +203,21 @@ def handle_message_event(event, say):
                 )
                 logging.info(f"Ended conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
-        elif user_message == "//슬랙봇종료":
+        elif user_message == "!슬랙봇종료":
             handle_exit_command(user_name)    
           
-        elif user_message.startswith("//cot"):
-            user_message = user_message[len("//cot"):].strip()
+        elif user_message.startswith("!cot"):
+            user_message = user_message[len("!cot"):].strip()
             say(text=":robot_face: _이어지는 질문을 인식했습니다(Chain of Thought). ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, CoT_prompt) 
             
-        elif user_message == "//healthcheck":
+        elif user_message == "!healthcheck":
             healthcheck_results = healthcheck_response()
             say(text=healthcheck_results, 
                 thread_ts=thread_ts
             )   
             
-        elif "thread_ts" in event and user_message not in ["//슬랙봇종료", "//healthcheck", "//대화종료", "//대화시작", "//대화인식", "//cot"]:
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!cot"]:
             say(text=":robot_face: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt)
             
