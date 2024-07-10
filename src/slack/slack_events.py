@@ -6,7 +6,7 @@ from threading import Thread, Event
 from slack_bolt.app import App
 from config.config import prompt, CoT_prompt
 from utils.tokenizer import count_token_usage, calculate_token_per_price, question_tokenizer
-from utils.utils import get_user_name, send_waiting_message, reset_timer, timer, handle_exit_command
+from utils.utils import get_user_name, reset_timer, timer, handle_exit_command
 from utils.openai_utils import get_openai_response, user_conversations, user_conversations_lock, healthcheck_response, split_message_into_blocks
 from config.config import slack_bot_token, slack_signing_secret
 
@@ -15,7 +15,7 @@ WAITING_MESSAGE_DELAY = 2  # seconds
 # Initialize start_time at the beginning of the script
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
-def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt):
+def respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt):
     
     model_name = "gpt-4o-2024-05-13"
     
@@ -35,9 +35,9 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")  
     start_time = time.time()
-    stop_event = Event()
-    waiting_thread = Thread(target=send_waiting_message, args=(say, thread_ts, channel_id, stop_event, WAITING_MESSAGE_DELAY))
-    waiting_thread.start()
+    # stop_event = Event()
+    # waiting_thread = Thread(target=send_waiting_message, args=(say, thread_ts, channel_id, stop_event, WAITING_MESSAGE_DELAY))
+    # waiting_thread.start()
 
     answer = get_openai_response(user_id, thread_ts, model_name)
 
@@ -48,8 +48,8 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     
     message_blocks = split_message_into_blocks(answer)
     
-    stop_event.set()  # Signal the waiting thread to stop
-    waiting_thread.join()
+    # stop_event.set()  # Signal the waiting thread to stop
+    # waiting_thread.join()
     
     end_time = time.time()
     elapsed_time_ms = (end_time - start_time) * 1000
@@ -61,38 +61,38 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id
     
     for block in message_blocks:
         say(
-        blocks=[
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": ":soomgo_:  생성된 답변",
-                    "emoji": True
-                }
-            },
-            {
-                "type": "divider"
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": block
-                }
-            },
-            {
-                "type": "divider"
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f":alarm_clock: _생성 시간(초) : {elapsed_time_ms / 1000:.2f} | {user_name}에 의해 {formatted_time}에 생성됨_"
+            blocks=[
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":soomgo_:  생성된 답변",
+                        "emoji": True
                     }
-                ]
-            },
-        ],
+                },
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": block
+                    }
+                },
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f":alarm_clock: _생성 시간(초) : {elapsed_time_ms / 1000:.2f} | {user_name}에 의해 {formatted_time}에 생성됨_"
+                        }
+                    ]
+                },
+            ],
         thread_ts=thread_ts, 
         icon_emoji=True
     )
@@ -126,10 +126,7 @@ def recognize_conversation(user_id, thread_ts, channel_id):
                     message["text"] = message["text"][len("//대화시작"):].strip()
                     continue
                 
-                if message["text"].startswith(":robot_face:") or message["text"].startswith("//"):
-                    continue
-                
-                if message["text"].startswith(":robot_face:") or message["text"].startswith("!"):
+                if message["text"].startswith(":robot_face:") or message["text"].startswith(":spinner:") or message["text"].startswith("//") or message["text"].startswith("!"):
                     continue
                 
                 if message["user"] == user_id:
@@ -175,15 +172,19 @@ def handle_message_event(event, say):
         
         if user_message.startswith("!대화시작"):
             user_message = user_message[len("!대화시작"):].strip()
-            say(
-                text=f":robot_face: _안녕하세요 {user_name}님!_ \n_대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
+            initial_message = say(
+                text=f":robot_face: _안녕하세요 {user_name}님!_ \n:spinner: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
                 mrkdwn=True, 
                 icon_emoji=True
             )
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt)
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt)
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
-
+            app.client.chat_update(
+                channel=channel_id,
+                ts=initial_message['ts'],
+                text=f":robot_face: _답변이 완료되었습니다._",
+            )
         elif user_message == "!대화인식":
             say(":robot_face: _기존 대화 이력을 인식했습니다._", 
                 thread_ts=thread_ts
@@ -208,9 +209,14 @@ def handle_message_event(event, say):
           
         elif user_message.startswith("!cot"):
             user_message = user_message[len("!cot"):].strip()
-            say(text=":robot_face: _이어지는 질문을 인식했습니다(Chain of Thought). ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, CoT_prompt) 
-            
+            initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다(Chain of Thought). ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, CoT_prompt) 
+            app.client.chat_update(
+                channel=channel_id,
+                ts=initial_message['ts'],
+                text=f":robot_face: _답변이 완료되었습니다._",
+            )
+
         elif user_message == "!healthcheck":
             healthcheck_results = healthcheck_response()
             say(text=healthcheck_results, 
@@ -218,9 +224,14 @@ def handle_message_event(event, say):
             )   
             
         elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!cot"]:
-            say(text=":robot_face: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, channel_id, prompt)
-            
+            initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt)
+            app.client.chat_update(
+                channel=channel_id,
+                ts=initial_message['ts'],
+                text=f":robot_face: _답변이 완료되었습니다._",
+            )
+    
         else:
             logging.error("Cannot read conversation: ", exc_info=True)
             say(text=":robot_face: _ChatGPT가 대화를 인식하지 못했습니다._", 

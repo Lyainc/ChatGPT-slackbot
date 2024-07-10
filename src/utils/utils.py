@@ -19,79 +19,79 @@ def get_user_name(app, user_id):
         logging.error(f"Error retrieving user name for user_id {user_id}", exc_info=True)
     return None
 
-def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_seconds):
-    # Slack 클라이언트 초기화
-    client = WebClient(token=slack_bot_token) 
+# def send_waiting_message(say, thread_ts, channel_id, stop_event, initial_delay_seconds):
+#     # Slack 클라이언트 초기화
+#     client = WebClient(token=slack_bot_token) 
     
-    delay_seconds = initial_delay_seconds
-    stopped = stop_event.wait(delay_seconds)
+#     delay_seconds = initial_delay_seconds
+#     stopped = stop_event.wait(delay_seconds)
     
-    if stopped:
-        return
+#     if stopped:
+#         return
     
-    progress_steps = [
-        "[>>__________________]", 
-        "[_>>_________________]", 
-        "[__>>________________]", 
-        "[___>>_______________]", 
-        "[____>>______________]", 
-        "[_____>>_____________]", 
-        "[______>>____________]", 
-        "[_______>>___________]", 
-        "[________>>__________]", 
-        "[_________>>_________]",
-        "[__________>>________]",
-        "[___________>>_______]",
-        "[____________>>______]",
-        "[_____________>>_____]",
-        "[______________>>____]",
-        "[_______________>>___]",
-        "[________________>>__]",
-        "[_________________>>_]",
-        "[__________________>>]",
-        ]
-    progress_index = 0
+#     progress_steps = [
+#         "[>>__________________]", 
+#         "[_>>_________________]", 
+#         "[__>>________________]", 
+#         "[___>>_______________]", 
+#         "[____>>______________]", 
+#         "[_____>>_____________]", 
+#         "[______>>____________]", 
+#         "[_______>>___________]", 
+#         "[________>>__________]", 
+#         "[_________>>_________]",
+#         "[__________>>________]",
+#         "[___________>>_______]",
+#         "[____________>>______]",
+#         "[_____________>>_____]",
+#         "[______________>>____]",
+#         "[_______________>>___]",
+#         "[________________>>__]",
+#         "[_________________>>_]",
+#         "[__________________>>]",
+#         ]
+#     progress_index = 0
 
-    # 처음으로 메시지를 보낸 후 메시지 타임스탬프를 저장합니다.
-    try:
-        progress_bar = progress_steps[progress_index]
-        response = say(
-            text=f"{progress_bar} :robot_face: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
-            thread_ts=thread_ts,
-            channel=channel_id,
-            mrkdwn=True, 
-            icon_emoji=True,            
-        )
-        message_ts = response['ts']  # 메시지의 타임스탬프를 저장
-        logging.info(f"Initial waiting message sent successfully")
-    except Exception as e:
-        logging.error("Error sending initial waiting message", exc_info=True)
-        return
+#     # 처음으로 메시지를 보낸 후 메시지 타임스탬프를 저장합니다.
+#     try:
+#         progress_bar = progress_steps[progress_index]
+#         response = say(
+#             text=f"{progress_bar} :robot_face: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
+#             thread_ts=thread_ts,
+#             channel=channel_id,
+#             mrkdwn=True, 
+#             icon_emoji=True,            
+#         )
+#         message_ts = response['ts']  # 메시지의 타임스탬프를 저장
+#         logging.info(f"Initial waiting message sent successfully")
+#     except Exception as e:
+#         logging.error("Error sending initial waiting message", exc_info=True)
+#         return
 
-    # 메시지 수정
-    while not stop_event.is_set():
-        delay_seconds += 2  # 2초 간격으로 변경
-        progress_index = (progress_index + 1) % len(progress_steps)
-        stopped = stop_event.wait(2)
-        if stopped:
-            # 마지막 메시지 발송
-            client.chat_update(
-                channel=channel_id,
-                ts=message_ts,
-                text=f":robot_face: _답변이 완료되었습니다._",
-            )
-            break
+#     # 메시지 수정
+#     while not stop_event.is_set():
+#         delay_seconds += 2  # 2초 간격으로 변경
+#         progress_index = (progress_index + 1) % len(progress_steps)
+#         stopped = stop_event.wait(2)
+#         if stopped:
+#             # 마지막 메시지 발송
+#             client.chat_update(
+#                 channel=channel_id,
+#                 ts=message_ts,
+#                 text=f":robot_face: _답변이 완료되었습니다._",
+#             )
+#             break
 
-        try:
-            progress_bar = progress_steps[progress_index]
-            # 2초 간격으로 메시지를 수정
-            client.chat_update(
-                channel=channel_id,
-                ts=message_ts,
-                text=f"{progress_bar} :robot_face: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
-            )
-        except Exception as e:
-            logging.error("Error updating waiting message", exc_info=True)
+#         try:
+#             progress_bar = progress_steps[progress_index]
+#             # 2초 간격으로 메시지를 수정
+#             client.chat_update(
+#                 channel=channel_id,
+#                 ts=message_ts,
+#                 text=f"{progress_bar} :robot_face: _ChatGPT가 답변을 생성하고 있습니다. 잠시만 기다려주세요._",
+#             )
+#         except Exception as e:
+#             logging.error("Error updating waiting message", exc_info=True)
 
 # 타이머 시작 함수
 def start_timer():
