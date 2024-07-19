@@ -2,14 +2,23 @@ import openai
 import threading
 import logging
 from slack_bolt import App
-from config.config import openai_api_keys, default_openai_api_key, slack_bot_token, slack_signing_secret
+from config.config import *
 
 user_conversations = {}
 user_conversations_lock = threading.Lock()
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
-def validate_bot_token():
+def calculate_token_per_price(question_token, answer_token, model_name):
+    try:
+        if model_name == "gpt-4o-2024-05-13":
+            total_price = question_token * 0.005 / 1000 + answer_token * 0.015 / 1000
+    except Exception as e:
+            logging.error(f"Model is not vaild : {e}", exc_info=True)
+            total_price = 0
+    return total_price
+
+def validate_bot_token() -> str:
     """
     Slack Bot 토큰의 유효성을 검사합니다.
     """
@@ -23,8 +32,8 @@ def validate_bot_token():
     except Exception as e:
         logging.error("Error testing Slack Bot Token validity", exc_info=True)
         return "Error testing Slack Bot Token validity"
-
-def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> str:
+    
+def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> dict:
     try:
         api_key = openai_api_keys.get(user_id)
         
@@ -34,18 +43,33 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> str:
             logging.info(f"Using OpenAI API Key(Masked): {masked_api_key}...")
             
             with user_conversations_lock:
-                messages = user_conversations.get(user_id, {}).get(thread_ts)
-                if not messages:
-                    raise ValueError("No messages found for the specified thread")
-                
+                # messages = user_conversations.get(user_id, {}).get(thread_ts)
+                messages = user_conversations.get(user_id, {}).get(thread_ts, [])
+                logging.info(f"Sending message to API: {messages}...")
                 completion = openai_client.chat.completions.create(
                     model=model_name,
                     messages=messages,
                     user=user_id,
                     temperature=1,
-                    frequency_penalty = 0.1
+                    frequency_penalty=0.1
                 )
-            return completion.choices[0].message.content.strip()
+            
+            answer = completion.choices[0].message.content.strip()
+            prompt_tokens, completion_tokens = completion.usage.prompt_tokens, completion.usage.completion_tokens
+            
+            # 새로운 assistant의 답변을 메시지로 추가
+            messages.append({"role": "assistant", "content": answer})
+            
+            # 대화 업데이트
+            user_conversations[user_id][thread_ts] = messages
+            
+            response = {
+                "answer": answer,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens
+            }
+            
+            return response
         else:
             logging.error("Unauthorized user access: No API key found for user", exc_info=True)
             return "Unauthorized user access. Please check your API key."
@@ -55,8 +79,8 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> str:
     except Exception as e:
         logging.error("Error generating OpenAI response:", exc_info=True)
         return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."
-
-def split_message_into_blocks(message, max_length=3000):
+    
+def split_message_into_blocks(message: str, max_length=3000) -> list:
     paragraphs = message.split('\n\n')
     blocks = []
     current_block = ""
@@ -76,7 +100,7 @@ def split_message_into_blocks(message, max_length=3000):
     
     return blocks
 
-def check_openai_and_slack_api():
+def check_openai_and_slack_api() -> tuple:
     """
     OpenAI API 및 Slack API의 유효성을 검사하고 각각의 상태를 반환합니다.
     """
@@ -107,7 +131,7 @@ def check_openai_and_slack_api():
 
     return slack_status, openai_status
 
-def healthcheck_response():
+def healthcheck_response() -> str:
     """
     Slack과 OpenAI API의 헬스체크를 수행하고 결과를 반환합니다.
     """
