@@ -9,9 +9,9 @@ from config.config import *
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
-def respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt):
+def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str):
     
-    model_name = "gpt-4o-2024-05-13"
+    model = "gpt-4o-mini-2024-07-18"
     
     with user_conversations_lock:
         if user_id not in user_conversations:
@@ -28,7 +28,7 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt):
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
     start_time = time.time()
     
-    response = get_openai_response(user_id, thread_ts, model_name)
+    response = get_openai_response(user_id, thread_ts, model, user_message)
     
     answer = response["answer"]
     prompt_tokens = response["prompt_tokens"]
@@ -44,10 +44,10 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt):
     end_time = time.time()
     elapsed_time_ms = (end_time - start_time) * 1000
 
-    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, model_name)
+    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, model)
     current_time = time.localtime()
     formatted_time = time.strftime("%Y년 %m월 %d일 %H시 %M분 %S초", current_time)
- 
+
     for block in message_blocks:
         say(
             blocks=[
@@ -82,6 +82,7 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt):
                     ]
                 },
             ],
+        text='fallback text message',
         thread_ts=thread_ts, 
         icon_emoji=True
     )
@@ -90,12 +91,12 @@ def respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt):
     logging.info(f"Elapsed time: {elapsed_time_ms:.2f} ms")
     logging.info(f"Prompt Token Count (From API): {prompt_tokens} / Completion Token Count (From API): {completion_tokens} / Expected Price(incl. Prompt Token): $ {expected_price:.4f}")
 
-def read_conversation_history(channel_id, thread_ts):
+def read_conversation_history(channel_id: str, thread_ts: str) -> list:
     conversation = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
     messages = conversation.get("messages", [])
     return messages
 
-def recognize_conversation(user_id, thread_ts, channel_id):
+def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
     conversation_history = read_conversation_history(channel_id, thread_ts)
     
     try:
@@ -137,7 +138,7 @@ def recognize_conversation(user_id, thread_ts, channel_id):
 def handle_message_event(event, say):
     
     logging.info("Received an event")  # Logging the event receipt
-
+    
     try:
         if event.get("channel_type") != "im":
             logging.info("Event is not a direct message. Ignoring.")
@@ -198,7 +199,7 @@ def handle_message_event(event, say):
 
         elif user_message == "!슬랙봇종료":
             handle_exit_command(user_name)    
-          
+
         elif user_message == "!healthcheck":
             healthcheck_results = healthcheck_response()
             say(text=healthcheck_results, 

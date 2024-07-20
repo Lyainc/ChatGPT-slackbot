@@ -9,10 +9,11 @@ user_conversations_lock = threading.Lock()
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
-def calculate_token_per_price(question_token, answer_token, model_name):
+def calculate_token_per_price(question_token: int, answer_token: int, model_name: str) -> float:
+    total_price = 0
     try:
-        if model_name == "gpt-4o-2024-05-13":
-            total_price = question_token * 0.005 / 1000 + answer_token * 0.015 / 1000
+        if model_name == "gpt-4o-mini-2024-07-18":
+            total_price = question_token * 0.00015 / 1000 + answer_token * 0.0006 / 1000
     except Exception as e:
             logging.error(f"Model is not vaild : {e}", exc_info=True)
             total_price = 0
@@ -33,7 +34,8 @@ def validate_bot_token() -> str:
         logging.error("Error testing Slack Bot Token validity", exc_info=True)
         return "Error testing Slack Bot Token validity"
     
-def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> dict:
+def get_openai_response(user_id: str, thread_ts: str, model_name: str, question: str) -> dict:
+    
     try:
         api_key = openai_api_keys.get(user_id)
         
@@ -43,8 +45,8 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> dict:
             logging.info(f"Using OpenAI API Key(Masked): {masked_api_key}...")
             
             with user_conversations_lock:
-                # messages = user_conversations.get(user_id, {}).get(thread_ts)
-                messages = user_conversations.get(user_id, {}).get(thread_ts, [])
+                
+                messages = user_conversations.setdefault(user_id, {}).setdefault(thread_ts, [])
                 logging.info(f"Sending message to API: {messages}...")
                 completion = openai_client.chat.completions.create(
                     model=model_name,
@@ -57,12 +59,26 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> dict:
             answer = completion.choices[0].message.content.strip()
             prompt_tokens, completion_tokens = completion.usage.prompt_tokens, completion.usage.completion_tokens
             
-            # 새로운 assistant의 답변을 메시지로 추가
+            if prompt_tokens + completion_tokens > 4000:
+                messages.append({"role": "user", "content": "전체 대화 내용을 기존 분량에서 1/3정도로 최대한 상세하게 요약해줘. 중간에 코드가 있다면 모든 코드가 요약에 포함될 필요는 없지만 요약을 위해 반드시 필요하다면 코드 조각은 요약문에 포함해도 좋아"})
+                summary_completion = openai_client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    user=user_id,
+                    temperature=1,
+                    frequency_penalty=0.1
+                )
+                
+                summary = summary_completion.choices[0].message.content.strip()
+                messages.clear()
+                messages.append({"role": "system", "content": basic_prompt})
+                messages.append({"role": "assistant", "content": summary})
+                messages.append({"role": "user", "content": question})
+                
             messages.append({"role": "assistant", "content": answer})
-            
-            # 대화 업데이트
+
             user_conversations[user_id][thread_ts] = messages
-            
+
             response = {
                 "answer": answer,
                 "prompt_tokens": prompt_tokens,
@@ -70,6 +86,7 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str) -> dict:
             }
             
             return response
+            
         else:
             logging.error("Unauthorized user access: No API key found for user", exc_info=True)
             return "Unauthorized user access. Please check your API key."
