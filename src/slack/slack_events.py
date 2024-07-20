@@ -3,6 +3,7 @@ import time
 import re
 
 from slack_bolt.app import App
+from typing import Any, Callable
 from utils.utils import *
 from utils.openai_utils import *
 from config.config import *
@@ -10,7 +11,9 @@ from config.config import *
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
 def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str):
-    
+    '''
+    user에게 ChatGPT의 결과물을 반환합니다.
+    '''
     model = "gpt-4o-mini-2024-07-18"
     
     with user_conversations_lock:
@@ -92,11 +95,17 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     logging.info(f"Prompt Token Count (From API): {prompt_tokens} / Completion Token Count (From API): {completion_tokens} / Expected Price(incl. Prompt Token): $ {expected_price:.4f}")
 
 def read_conversation_history(channel_id: str, thread_ts: str) -> list:
+    '''
+    thread의 대화 내용을 읽습니다.
+    '''
     conversation = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
     messages = conversation.get("messages", [])
     return messages
 
 def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
+    '''
+    thread의 대화 내용을 dictionary에 저장합니다.
+    '''
     conversation_history = read_conversation_history(channel_id, thread_ts)
     
     try:
@@ -132,10 +141,12 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
             
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
-    
-        
+
 @app.event("message")
-def handle_message_event(event, say):
+def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
+    '''
+    user가 입력한 메시지를 인식해 메시지의 내용에 따라 결과값을 반환합니다.
+    '''
     
     logging.info("Received an event")  # Logging the event receipt
     

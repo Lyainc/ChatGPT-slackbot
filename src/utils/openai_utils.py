@@ -10,6 +10,9 @@ user_conversations_lock = threading.Lock()
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
 def calculate_token_per_price(question_token: int, answer_token: int, model_name: str) -> float:
+    """
+    토큰 당 가격을 계산합니다.
+    """
     total_price = 0
     try:
         if model_name == "gpt-4o-mini-2024-07-18":
@@ -35,7 +38,9 @@ def validate_bot_token() -> str:
         return "Error testing Slack Bot Token validity"
     
 def get_openai_response(user_id: str, thread_ts: str, model_name: str, question: str) -> dict:
-    
+    """
+    OpenAI API를 사용해 data를 가져옵니다.
+    """
     try:
         api_key = openai_api_keys.get(user_id)
         
@@ -98,6 +103,9 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
         return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."
     
 def split_message_into_blocks(message: str, max_length=3000) -> list:
+    '''
+    반환된 메시지의 길이가 일정 길이 이상인 경우 문맥 단위로 자릅니다.
+    '''
     paragraphs = message.split('\n\n')
     blocks = []
     current_block = ""
@@ -121,11 +129,11 @@ def check_openai_and_slack_api() -> tuple:
     """
     OpenAI API 및 Slack API의 유효성을 검사하고 각각의 상태를 반환합니다.
     """
-    # OpenAI API 유효성 검사
+
     openai_status = "OpenAI API is operational."
     try:
         openai_client = openai.OpenAI(api_key=default_openai_api_key)
-        models = openai_client.models.list()  # 단순 헬스 체크 요청 (예: 모델 목록 가져오기)
+        models = openai_client.models.list()
         if "error" in models:
             openai_status = "OpenAI API is not operational."
         else:
@@ -134,7 +142,6 @@ def check_openai_and_slack_api() -> tuple:
         logging.error("Healthcheck: rror testing OpenAI API", exc_info=True)
         openai_status = "OpenAI API is not operational."
 
-    # Slack API 유효성 검사
     slack_status = "Slack API is operational."
     try:
         auth_response = app.client.auth_test()
