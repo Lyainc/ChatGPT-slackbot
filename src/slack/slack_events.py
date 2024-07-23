@@ -4,6 +4,7 @@ import re
 
 from slack_bolt.app import App
 from typing import Any, Callable
+from utils.notion_utils import *
 from utils.utils import *
 from utils.openai_utils import *
 from config.config import *
@@ -24,9 +25,9 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
             user_conversations[user_id][thread_ts] = [
                 {"role": "system", "content": prompt}
             ]
-            
+                    
         user_conversations[user_id][thread_ts].append({"role": "user", "content": user_message})
-    
+
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
     start_time = time.time()
@@ -145,7 +146,7 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
 @app.event("message")
 def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
     '''
-    user가 입력한 메시지를 인식해 메시지의 내용에 따라 결과값을 반환합니다.
+    User가 입력한 메시지를 인식해 메시지의 내용에 따라 결과값을 반환합니다.
     '''
     
     logging.info("Received an event")  # Logging the event receipt
@@ -217,7 +218,23 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 thread_ts=thread_ts
             )   
             
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!cot"]:
+        elif user_message.startswith("!메뉴추천") or user_message == "!메뉴추천":
+            if user_message.startswith("!메뉴추천"):
+                user_message = user_message[len("!메뉴추천"):].strip()
+                
+            initial_message = say(text=":spinner: _추천 메뉴를 선택하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
+            notion_data = fetch_notion_data(database_id=notion_database_id)
+            logging.info(f"Fetched data from Notion: {notion_data}")
+            recommand_prompt = f"{notion_data}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 데이터를 추천해줘"
+            
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, recommand_prompt)
+            app.client.chat_update(
+                channel=channel_id,
+                ts=initial_message['ts'],
+                text=f":robot_face: _추천이 완료되었습니다._",
+            )
+            
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!숨식추천"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
             app.client.chat_update(

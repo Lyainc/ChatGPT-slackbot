@@ -7,6 +7,8 @@ slack_app_token = os.getenv("SLACK_APP_TOKEN")
 slack_bot_token = os.getenv("SLACK_BOT_TOKEN")
 slack_signing_secret = os.getenv("SLACK_SIGNING_KEY")
 default_openai_api_key = os.getenv('DEFAULT_OPEN_AI_API_KEY')
+notion_integration_token = os.getenv('NOTION_INTEGRATION_TOKEN')
+notion_database_id = os.getenv("NOTION_DATABASE_ID")
 
 
 openai_api_keys = {

@@ -1,10 +1,4 @@
 import logging
-import sys
-import os
-
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# 프로젝트의 루트 디렉토리 경로를 sys.path에 추가합니다.
-# sys.path.append(os.path.join(current_dir, '../../'))
 
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from utils.logger import stop_listener

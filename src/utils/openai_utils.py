@@ -73,7 +73,7 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
                     temperature=1,
                     frequency_penalty=0.1
                 )
-                
+            
                 summary = summary_completion.choices[0].message.content.strip()
                 messages.clear()
                 messages.append({"role": "system", "content": basic_prompt})
@@ -129,7 +129,7 @@ def check_openai_and_slack_api() -> tuple:
     """
     OpenAI API 및 Slack API의 유효성을 검사하고 각각의 상태를 반환합니다.
     """
-
+    
     openai_status = "OpenAI API is operational."
     try:
         openai_client = openai.OpenAI(api_key=default_openai_api_key)
