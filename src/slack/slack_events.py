@@ -225,7 +225,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
             initial_message = say(text=":spinner: _추천 메뉴를 선택하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
             notion_data = fetch_notion_data(database_id=notion_database_id)
             logging.info(f"Fetched data from Notion: {notion_data}")
-            recommand_prompt = f"{notion_data}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 데이터를 추천해줘"
+            recommand_prompt = f"{notion_data}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 데이터를 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 안돼."
             
             respond_to_user(user_id, user_name, thread_ts, user_message, say, recommand_prompt)
             app.client.chat_update(
@@ -234,7 +234,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 text=f":robot_face: _추천이 완료되었습니다._",
             )
             
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!숨식추천"]:
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!메뉴추천"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
             app.client.chat_update(

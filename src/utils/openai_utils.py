@@ -64,7 +64,7 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
             answer = completion.choices[0].message.content.strip()
             prompt_tokens, completion_tokens = completion.usage.prompt_tokens, completion.usage.completion_tokens
             
-            if prompt_tokens + completion_tokens > 4000:
+            if prompt_tokens + completion_tokens > 4000 and not "카토멘" in messages:
                 messages.append({"role": "user", "content": "전체 대화 내용을 기존 분량에서 1/3정도로 최대한 상세하게 요약해줘. 중간에 코드가 있다면 모든 코드가 요약에 포함될 필요는 없지만 요약을 위해 반드시 필요하다면 코드 조각은 요약문에 포함해도 좋아"})
                 summary_completion = openai_client.chat.completions.create(
                     model=model_name,
