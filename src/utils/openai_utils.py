@@ -22,21 +22,6 @@ def calculate_token_per_price(question_token: int, answer_token: int, model_name
             total_price = 0
     return total_price
 
-def validate_bot_token() -> str:
-    """
-    Slack Bot 토큰의 유효성을 검사합니다.
-    """
-    try:
-        auth_response = app.client.auth_test()
-        if not auth_response["ok"]:
-            logging.error(f"Error during auth_test: {auth_response['error']}")
-            exit(1)
-        logging.info("Slack Bot Token is valid")
-        return "Slack Bot Token is valid"
-    except Exception as e:
-        logging.error("Error testing Slack Bot Token validity", exc_info=True)
-        return "Error testing Slack Bot Token validity"
-    
 def get_openai_response(user_id: str, thread_ts: str, model_name: str, question: str) -> dict:
     """
     OpenAI API를 사용해 data를 가져옵니다.
@@ -64,7 +49,7 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
             answer = completion.choices[0].message.content.strip()
             prompt_tokens, completion_tokens = completion.usage.prompt_tokens, completion.usage.completion_tokens
             
-            if prompt_tokens + completion_tokens > 4000 and not "카토멘" in messages:
+            if prompt_tokens + completion_tokens > 5000 and not "카토멘" or "숨고팀" in messages:
                 messages.append({"role": "user", "content": "전체 대화 내용을 기존 분량에서 1/3정도로 최대한 상세하게 요약해줘. 중간에 코드가 있다면 모든 코드가 요약에 포함될 필요는 없지만 요약을 위해 반드시 필요하다면 코드 조각은 요약문에 포함해도 좋아"})
                 summary_completion = openai_client.chat.completions.create(
                     model=model_name,
@@ -124,41 +109,3 @@ def split_message_into_blocks(message: str, max_length=3000) -> list:
         blocks.append(current_block)
     
     return blocks
-
-def check_openai_and_slack_api() -> tuple:
-    """
-    OpenAI API 및 Slack API의 유효성을 검사하고 각각의 상태를 반환합니다.
-    """
-    
-    openai_status = "OpenAI API is operational."
-    try:
-        openai_client = openai.OpenAI(api_key=default_openai_api_key)
-        models = openai_client.models.list()
-        if "error" in models:
-            openai_status = "OpenAI API is not operational."
-        else:
-            logging.info("Healthcheck: OpenAI API is operational")
-    except Exception as e:
-        logging.error("Healthcheck: rror testing OpenAI API", exc_info=True)
-        openai_status = "OpenAI API is not operational."
-
-    slack_status = "Slack API is operational."
-    try:
-        auth_response = app.client.auth_test()
-        if not auth_response["ok"]:
-            slack_status = f"Slack API is not operational: {auth_response['error']}"
-        else:
-            logging.info(f"Healthcheck: Slack API is operational")
-    except Exception as e:
-        logging.error("Healthcheck: Error testing Slack API", exc_info=True)
-        slack_status = "Slack API is not operational."
-
-    return slack_status, openai_status
-
-def healthcheck_response() -> str:
-    """
-    Slack과 OpenAI API의 헬스체크를 수행하고 결과를 반환합니다.
-    """
-    slack_status, openai_status = check_openai_and_slack_api()
-    slack_bot_token_status = validate_bot_token()
-    return f"*Health Check Results:*\n- {slack_bot_token_status}\n- {openai_status}\n- {slack_status}"
