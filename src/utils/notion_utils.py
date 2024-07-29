@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from config.config import *
 from utils.cache import *
 
-app = notion_client.Client(auth=notion_integration_token)
+app = notion_client.Client(auth=notion_integration_key)
 cached_data = load_cache()
 
 def fetch_notion_restaurant_data (database_id: str) -> dict:

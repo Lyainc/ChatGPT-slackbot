@@ -36,38 +36,40 @@ def clean_values(data):
 
 def save_cache(data):
     clean_data = clean_values(data)
-    if os.path.exists(CACHE_FILE):
+    cache_exists = os.path.exists(CACHE_FILE)
+    summary_cache_exists = os.path.exists(SUMMARY_CACHE_FILE)
+
+    if cache_exists:
         with open(CACHE_FILE, 'r', encoding='utf-8') as f:
             existing_data = json.load(f)
-        if existing_data == clean_data:
+        if existing_data == clean_data and summary_cache_exists:
             logging.info("Data is already cached. Skipping caching.")
-            summaized_data = summary_cache()
-            with open(SUMMARY_CACHE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(summaized_data, f, ensure_ascii=False, indent=4)
             return
-        
+        if existing_data != clean_data:
+            logging.info("Data has changed. Updating cache and summary.")
+    
+    # Update the notion cache
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(clean_data, f, ensure_ascii=False, indent=4)
-        
-    summaized_data = summary_cache()
+
+    # Update the summary cache
+    summarized_data = summary_cache()
     with open(SUMMARY_CACHE_FILE, 'w', encoding='utf-8') as f:
-        json.dump(summaized_data, f, ensure_ascii=False, indent=4)
+        json.dump(summarized_data, f, ensure_ascii=False, indent=4)
     
 def summary_cache():
     notion_cache = load_cache()
-    
     summarized_data = {}
+
     for key, value in notion_cache.items():
         if key == "dcaf6463dc8b4dfbafa6eafe6ea3881c":
             continue
         summarized_data[key] = summary_to_openai(value)
-        
-    if os.path.exists(SUMMARY_CACHE_FILE):
-        with open(SUMMARY_CACHE_FILE, 'r', encoding='utf-8') as f:
-            existing_summarized_data = json.load(f)
-        if existing_summarized_data == summarized_data:
-            logging.info("Summarized data is already cached. Skipping caching.")
-            return
+
+    existing_summarized_data = load_summarized_cache()
+    if existing_summarized_data == summarized_data:
+        logging.info("Summarized data is already cached. Skipping caching.")
+        return existing_summarized_data
         
     return summarized_data
 

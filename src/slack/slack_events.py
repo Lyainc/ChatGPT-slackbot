@@ -120,22 +120,33 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                 
                 if message["text"].startswith("!대화시작"):
                     message["text"] = message["text"][len("!대화시작"):].strip()
+                    user_message = message["text"]
                     
                     user_conversations[user_id][thread_ts].append({
                         "role": "system",
                         "content": basic_prompt
+                    })
+                    
+                    user_conversations[user_id][thread_ts].append({
+                        "role": "user",
+                        "content": user_message
                     })
                     
                     continue
                 
                 if message["text"].startswith("//대화시작"):
                     message["text"] = message["text"][len("//대화시작"):].strip()
+                    user_message = message["text"]
                     
                     user_conversations[user_id][thread_ts].append({
                         "role": "system",
                         "content": basic_prompt
                     })
                     
+                    user_conversations[user_id][thread_ts].append({
+                        "role": "user",
+                        "content": user_message
+                    })
                     continue
                 
                 if message["text"].startswith("!숨고"):
@@ -148,7 +159,6 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                         "role": "system",
                         "content": prompt
                     })
-                    
                     continue
                 
                 if message["text"].startswith("!메뉴추천"):
@@ -161,22 +171,134 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                         "role": "system",
                         "content": prompt
                     })
-                    
                     continue
                 
                 if message["text"].startswith(":robot_face:") or message["text"].startswith(":spinner:") or message["text"].startswith("//") or message["text"].startswith("!"):
                     continue
                 
-                if message["user"] == user_id:
-                    role = "user"
-                else:
-                    role = "assistant"
+                if message["user"] == "U076EJQTPNC" and message["blocks"][2]:
+                    user_conversations[user_id][thread_ts].append({
+                        "role": "assistant",
+                        "content": message["blocks"][2]["text"]["text"]
+                    })
+                    continue
                 
-                user_conversations[user_id][thread_ts].append({
-                    "role": role,
-                    "content": message["blocks"][2]["text"]["text"]
-                })
-                
-            
+                if message["user"] == user_id and not message["text"].startswith("!"):
+                    user_conversations[user_id][thread_ts].append({
+                        "role": "user",
+                        "content": message["text"]
+                    }) 
+                    continue
+              
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
+
+# def remove_conversation(channel_id, parent_ts, user_id):
+#     """
+#     Removes the user's and bot's messages from a given thread.
+#     """
+    
+#     app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
+#     try:
+
+#         # Fetch all messages in the thread
+#         response = app.client.conversations_replies(channel=channel_id, ts=parent_ts)
+
+#         if not response.get('ok'):
+#             logging.error(f"Failed to fetch messages: {response.get('error')}")
+#             return
+
+#         messages = response['messages']
+
+#         # Loop through each message in the thread in reverse order
+#         for message in reversed(messages):
+#             message_id = message['ts']
+#             message_user = message.get('user')
+
+#             # Check if the message is from the user or the bot
+#             if message_user == user_id or message_user == app.client.auth_test().get('user_id'):
+#                 # Attempt to delete the message
+#                 delete_response = app.client.chat_delete(channel=channel_id, ts=message_id)
+
+#                 if delete_response.get('ok'):
+#                     logging.info(f"Deleted message: {message.get('text')}")
+#                 else:
+#                     logging.error(f"Failed to delete message {message_id} by {message_user}: {delete_response.get('error')}")
+
+#         # Finally, delete the parent message
+#         delete_response = app.client.chat_delete(channel=channel_id, ts=parent_ts)
+#         if delete_response.get('ok'):
+#             logging.info(f"Deleted parent message: {parent_ts}")
+#         else:
+#             logging.error(f"Failed to delete parent message {parent_ts}: {delete_response.get('error')}")
+
+#     except Exception as e:
+#         logging.error(f"Error processing messages: {e}")
+
+def delete_message(app, channel_id, ts):
+    try:
+        response = app.client.chat_delete(channel=channel_id, ts=ts)
+        if response.get('ok'):
+            logging.info(f"Deleted message: {ts}")
+        else:
+            logging.error(f"Failed to delete message {ts}: {response.get('error')}")
+    except Exception as e:
+        logging.error(f"Error processing messages: {e}")
+
+def get_thread_messages(client, channel_id, thread_ts):
+    try:
+        response = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
+        if not response.get('ok'):
+            logging.error(f"Failed to fetch messages: {response.get('error')}")
+            return []
+        return response['messages']
+    except Exception as e:
+        logging.error(f"Error processing messages: {e}")
+        return []
+
+def delete_thread_messages(app, channel_id, thread_ts, bot_user_id, user_id):
+    
+    while True:
+        messages = get_thread_messages(app, channel_id, thread_ts)
+        if not messages:
+            break
+
+        # Delete messages in reverse order
+        for message in reversed(messages):
+            message_ts = message['ts']
+            message_user = message.get('user')
+            
+            # Delete the message if it's from the user or the bot
+            if message_user == user_id or message_user == bot_user_id:
+                delete_message(app, channel_id, message_ts)
+            
+            # Recursively delete replies in threads
+            if 'thread_ts' in message and message['thread_ts'] == message_ts:
+                delete_thread_messages(app, channel_id, message_ts, bot_user_id, user_id)
+
+        # After deleting, fetch the messages again to see if there are any remaining
+        new_messages = get_thread_messages(app, channel_id, thread_ts)
+        if len(new_messages) == len(messages):
+            break  # If no messages were deleted, exit the loop
+
+def remove_conversation(channel_id, parent_ts, user_id):
+    """
+    Removes the user's and bot's messages from a given thread.
+    """
+    try:
+        # Get bot user ID
+        auth_response = app.client.auth_test()
+        bot_user_id = auth_response['user_id']
+
+        # Log user and bot user IDs for debugging
+        logging.info(f"Bot User ID: {bot_user_id}")
+        logging.info(f"Target User ID: {user_id}")
+
+        # Delete all thread messages
+        delete_thread_messages(app, channel_id, parent_ts, bot_user_id, user_id)
+
+        # Finally, delete the parent message
+        delete_message(app, channel_id, parent_ts)
+
+    except Exception as e:
+        logging.error(f"Error processing messages: {e}")

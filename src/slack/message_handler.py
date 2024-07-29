@@ -1,5 +1,4 @@
 import logging
-
 from slack_bolt.app import App
 from typing import Any, Callable
 from config.config import *
@@ -116,7 +115,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 text=f":robot_face: _답변이 완료되었습니다._",
             )
             
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!메뉴추천", "!숨고"]:
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!메뉴추천", "!숨고", "!대화삭제", "Y", "n"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
             app.client.chat_update(
@@ -124,7 +123,11 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 ts=initial_message['ts'],
                 text=f":robot_face: _답변이 완료되었습니다._",
             )
-    
+        
+        elif user_message == "!대화삭제":
+            say(text=":warning: _대화를 삭제하겠습니까? (Y/n)_", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
+            remove_conversation(channel_id, thread_ts, user_id)
+
         else:
             logging.error("Cannot read conversation: ", exc_info=True)
             say(text=":robot_face: _ChatGPT가 대화를 인식하지 못했습니다._", 

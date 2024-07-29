@@ -5,7 +5,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from typing import Any, Callable
 from utils.logger import stop_listener
-from slack.slack_events import app
+from slack.slack_events import *
 from config.config import *
 from slack.message_handler import handle_message_event
 from utils.notion_utils import *
@@ -15,11 +15,9 @@ app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 # 전역 데이터 캐시 딕셔너리 선언
 notion_data_cache = {}
 
-page_ids = notion_page_ids
-
 async def preload_notion_data():
    global notion_data_cache
-   for page_id in page_ids:
+   for page_id in NOTION_PAGE_IDS:
        try:
            if page_id == "dcaf6463dc8b4dfbafa6eafe6ea3881c":
                # 특정 UUID일 때 fetch_notion_restaurant_data 호출
