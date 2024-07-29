@@ -35,7 +35,6 @@ def message_handler(event: dict[str, Any], say: Callable[..., None]):
     handle_message_event(event, say)
 
 def start_bot():
-    
     try:
         logging.info("Starting Slack bot")
         # 데이터 미리 로딩 시작

@@ -9,6 +9,7 @@ from utils.openai_utils import *
 from config.config import *
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
+user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)
 
 def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str):
     '''
@@ -193,112 +194,33 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
 
-# def remove_conversation(channel_id, parent_ts, user_id):
-#     """
-#     Removes the user's and bot's messages from a given thread.
-#     """
-    
-#     app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
-#     try:
-
-#         # Fetch all messages in the thread
-#         response = app.client.conversations_replies(channel=channel_id, ts=parent_ts)
-
-#         if not response.get('ok'):
-#             logging.error(f"Failed to fetch messages: {response.get('error')}")
-#             return
-
-#         messages = response['messages']
-
-#         # Loop through each message in the thread in reverse order
-#         for message in reversed(messages):
-#             message_id = message['ts']
-#             message_user = message.get('user')
-
-#             # Check if the message is from the user or the bot
-#             if message_user == user_id or message_user == app.client.auth_test().get('user_id'):
-#                 # Attempt to delete the message
-#                 delete_response = app.client.chat_delete(channel=channel_id, ts=message_id)
-
-#                 if delete_response.get('ok'):
-#                     logging.info(f"Deleted message: {message.get('text')}")
-#                 else:
-#                     logging.error(f"Failed to delete message {message_id} by {message_user}: {delete_response.get('error')}")
-
-#         # Finally, delete the parent message
-#         delete_response = app.client.chat_delete(channel=channel_id, ts=parent_ts)
-#         if delete_response.get('ok'):
-#             logging.info(f"Deleted parent message: {parent_ts}")
-#         else:
-#             logging.error(f"Failed to delete parent message {parent_ts}: {delete_response.get('error')}")
-
-#     except Exception as e:
-#         logging.error(f"Error processing messages: {e}")
-
-def delete_message(app, channel_id, ts):
+def delete_thread_messages(channel_id, thread_ts):
     try:
-        response = app.client.chat_delete(channel=channel_id, ts=ts)
-        if response.get('ok'):
-            logging.info(f"Deleted message: {ts}")
-        else:
-            logging.error(f"Failed to delete message {ts}: {response.get('error')}")
-    except Exception as e:
-        logging.error(f"Error processing messages: {e}")
+        # 스레드 메시지 히스토리 가져오기
+        result = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
+        thread_messages = result["messages"]
 
-def get_thread_messages(client, channel_id, thread_ts):
-    try:
-        response = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
-        if not response.get('ok'):
-            logging.error(f"Failed to fetch messages: {response.get('error')}")
-            return []
-        return response['messages']
-    except Exception as e:
-        logging.error(f"Error processing messages: {e}")
-        return []
+        # 각 스레드 메시지 삭제
+        for thread_message in reversed(thread_messages):
+            ts = thread_message["ts"]
+            user = thread_message["user"]
+            text_summary = thread_message.get("text", "")[:30]  # 메시지 앞 30자 요약
 
-def delete_thread_messages(app, channel_id, thread_ts, bot_user_id, user_id):
-    
-    while True:
-        messages = get_thread_messages(app, channel_id, thread_ts)
-        if not messages:
-            break
+            # 스레드 메시지 삭제 전에 로그 출력
+            logging.info(f"Deleting thread message: {text_summary}")
 
-        # Delete messages in reverse order
-        for message in reversed(messages):
-            message_ts = message['ts']
-            message_user = message.get('user')
-            
-            # Delete the message if it's from the user or the bot
-            if message_user == user_id or message_user == bot_user_id:
-                delete_message(app, channel_id, message_ts)
-            
-            # Recursively delete replies in threads
-            if 'thread_ts' in message and message['thread_ts'] == message_ts:
-                delete_thread_messages(app, channel_id, message_ts, bot_user_id, user_id)
-
-        # After deleting, fetch the messages again to see if there are any remaining
-        new_messages = get_thread_messages(app, channel_id, thread_ts)
-        if len(new_messages) == len(messages):
-            break  # If no messages were deleted, exit the loop
-
-def remove_conversation(channel_id, parent_ts, user_id):
-    """
-    Removes the user's and bot's messages from a given thread.
-    """
-    try:
-        # Get bot user ID
-        auth_response = app.client.auth_test()
-        bot_user_id = auth_response['user_id']
-
-        # Log user and bot user IDs for debugging
-        logging.info(f"Bot User ID: {bot_user_id}")
-        logging.info(f"Target User ID: {user_id}")
-
-        # Delete all thread messages
-        delete_thread_messages(app, channel_id, parent_ts, bot_user_id, user_id)
-
-        # Finally, delete the parent message
-        delete_message(app, channel_id, parent_ts)
+            try:
+                if user == "U076EJQTPNC":
+                    # 봇이 만든 메시지 삭제
+                    app.client.chat_delete(channel=channel_id, ts=ts)
+                else:
+                    # 사용자가 만든 메시지 삭제
+                    user_app.client.chat_delete(channel=channel_id, ts=ts)
+                logging.info(f"Deleted thread message with ts: {ts}")
+            except Exception as e:
+                logging.error(f"Error deleting thread message: {e.response['error']}")
+                
+            time.sleep(2)
 
     except Exception as e:
-        logging.error(f"Error processing messages: {e}")
+        logging.error(f"Error fetching thread history: {e.response['error']}")

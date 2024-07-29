@@ -104,7 +104,6 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 
             initial_message = say(text=":spinner: _Soomgo Notion을 확인하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
             logging.info(f"Fetched data from Notion")
-            # notion_cache = {key: value for key, value in load_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
             notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
             prompt = f"{notion_cache}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼."
             
@@ -115,7 +114,10 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 text=f":robot_face: _답변이 완료되었습니다._",
             )
             
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!메뉴추천", "!숨고", "!대화삭제", "Y", "n"]:
+        elif "text" in event and user_message.startswith("!대화삭제"):
+            delete_thread_messages(channel_id, thread_ts)
+
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!메뉴추천", "!숨고", "!대화삭제"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
             app.client.chat_update(
@@ -124,10 +126,6 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 text=f":robot_face: _답변이 완료되었습니다._",
             )
         
-        elif user_message == "!대화삭제":
-            say(text=":warning: _대화를 삭제하겠습니까? (Y/n)_", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)
-            remove_conversation(channel_id, thread_ts, user_id)
-
         else:
             logging.error("Cannot read conversation: ", exc_info=True)
             say(text=":robot_face: _ChatGPT가 대화를 인식하지 못했습니다._", 

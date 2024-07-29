@@ -5,6 +5,7 @@ load_dotenv()
 
 slack_app_token = os.getenv("SLACK_APP_TOKEN")
 slack_bot_token = os.getenv("SLACK_BOT_TOKEN")
+slack_user_token = os.getenv("SLACK_USER_TOKEN")
 slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET")
 default_openai_api_key = os.getenv('DEFAULT_OPENAI_API_KEY')
 notion_integration_key = os.getenv('NOTION_INTEGRATION_KEY')
