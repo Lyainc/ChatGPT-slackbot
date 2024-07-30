@@ -52,10 +52,10 @@ def save_cache(data):
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(clean_data, f, ensure_ascii=False, indent=4)
 
-    # Update the summary cache
-    summarized_data = summary_cache()
-    with open(SUMMARY_CACHE_FILE, 'w', encoding='utf-8') as f:
-        json.dump(summarized_data, f, ensure_ascii=False, indent=4)
+    # # Update the summary cache
+    # summarized_data = summary_cache()
+    # with open(SUMMARY_CACHE_FILE, 'w', encoding='utf-8') as f:
+    #     json.dump(summarized_data, f, ensure_ascii=False, indent=4)
     
 def summary_cache():
     notion_cache = load_cache()
@@ -64,28 +64,32 @@ def summary_cache():
     for key, value in notion_cache.items():
         if key == "dcaf6463dc8b4dfbafa6eafe6ea3881c":
             continue
-        summarized_data[key] = summary_to_openai(value)
-
-    existing_summarized_data = load_summarized_cache()
-    if existing_summarized_data == summarized_data:
-        logging.info("Summarized data is already cached. Skipping caching.")
-        return existing_summarized_data
+        summarized_data[key] = summarize_by_openai(value)
         
     return summarized_data
 
-def summary_to_openai(data):
+def summarize_by_openai(data):
     
     api_key = default_openai_api_key
     openai_client = openai.OpenAI(api_key=api_key)
     
     messages = [
-        {"role": "user", "content": f"{data}\n\n 위의 데이터를 빠지는 내용 없이 bullet point로 요약해줘. 데이터에 URL이 포함되어있다면 놓치지 말고 내용에 반드시 포함해줘."}
+        {"role": "user", 
+         "content": f"""{data}\n\n 위의 데이터를 빠지는 내용 없이 중요한 내용 위주로 bullet point로 요약해줘. 아래의 내용은 반드시 포함되어야 해.
+         - URL, 링크 등 웹페이지. 
+           - 만약 https://가 없는 32개 character의 uuid 형식의 링크를 발견하면 앞에 [https://notion.so/soomgo/]를 붙여서 접속가능한 URL로 만들어줘. 이 경우가 아니라면 링크는 원래의 주소를 그대로 유지해줘.
+         - 예산, 금액 관련 내용
+         - 담당자, 사람
+         - 이용 방법
+         - 날짜
+         """}
     ]
     
     completion = openai_client.chat.completions.create(
         model=default_model,
         messages=messages,
-        seed=1
+        seed=1,
+        temperature=1
     )
     
     answer = completion.choices[0].message.content.strip()

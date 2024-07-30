@@ -21,7 +21,7 @@ def calculate_token_per_price(question_token: int, answer_token: int, model_name
             logging.error(f"Model is not vaild : {e}", exc_info=True)
             total_price = 0
     return total_price
-
+   
 def get_openai_response(user_id: str, thread_ts: str, model_name: str, question: str) -> dict:
     """
     OpenAI API를 사용해 data를 가져옵니다.

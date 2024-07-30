@@ -30,10 +30,11 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
 
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
+    
     start_time = time.time()
     
     response = get_openai_response(user_id, thread_ts, model, user_message)
-    
+  
     answer = response["answer"]
     prompt_tokens = response["prompt_tokens"]
     completion_tokens = response["completion_tokens"]
@@ -155,7 +156,7 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     
                     notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
                     prompt = f"""{notion_cache}\n 
-                    위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼.
+                    위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼. 요청 사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.
                     """
                     
                     user_conversations[user_id][thread_ts].append({
@@ -168,26 +169,24 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     message["text"] = message["text"][len("!메뉴추천"):].strip()
         
                     notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-                    prompt = f"""{notion_cache}\n
-                    * 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 세 곳을 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼. 원하는 메뉴가 없다면 없다고 솔직하게 이야기 해. 만야 사용자가 원하는 메뉴를 제공하는 식당이 세 곳 미만이면 그대로 출력해줘\n\n
-                    * 질문: {message["text"]}\n\n
-                    * 답변 예시
-                        1. [상호명]
-                        - 추천 메뉴: [추천 메뉴]
-                        - 이동 시간: [이동 시간]
+                    prompt = f"""원본 데이터: \n```json{notion_cache}```\n
+                    * json 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 세 곳을 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼. 최대한 정확한 메뉴를 선정하되 메뉴의 유사도를 판단해서 순위를 매겨줘. 만약 사용자가 원하는 메뉴를 제공하는 식당이 세 곳 미만이면 그대로 출력해줘. 답변 양식을 비롯한 요청사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.\n\n
+                    * 답변 예시\n
+                        1. 상호명
+                        - 추천 메뉴: 
+                        - 이동 시간: 
                         - 링크: [네이버 지도 바로가기]
                         
-                        2. [상호명]
-                        - 대표 메뉴: [추천 메뉴]
-                        - 이동 시간: [이동 시간]
+                        2. 상호명
+                        - 대표 메뉴: 
+                        - 이동 시간: 
                         - 링크: [네이버 지도 바로가기]
                         
-                        3. [상호명]
-                        - 대표 메뉴: [추천 메뉴]
-                        - 이동 시간: [이동 시간]
+                        3. 상호명
+                        - 대표 메뉴: 
+                        - 이동 시간: 
                         - 링크: [네이버 지도 바로가기]
                     """
-
                     user_conversations[user_id][thread_ts].append({
                         "role": "system",
                         "content": prompt
@@ -213,6 +212,38 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
               
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
+
+def delete_thread_messages(channel_id, thread_ts):
+    try:
+        # 스레드 메시지 히스토리 가져오기
+        result = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
+        thread_messages = result["messages"]
+
+        # 각 스레드 메시지 삭제
+        for thread_message in reversed(thread_messages):
+            ts = thread_message["ts"]
+            user = thread_message["user"]
+            text_summary = thread_message.get("text", "")[:30]  # 메시지 앞 30자 요약
+
+            # 스레드 메시지 삭제 전에 로그 출력
+            logging.info(f"Deleting thread message: {text_summary}")
+
+            try:
+                if user == "U076EJQTPNC":
+                    # 봇이 만든 메시지 삭제
+                    app.client.chat_delete(channel=channel_id, ts=ts)
+                else:
+                    # 사용자가 만든 메시지 삭제
+                    user_app.client.chat_delete(channel=channel_id, ts=ts)
+                logging.info(f"Deleted thread message with ts: {ts}")
+            except Exception as e:
+                logging.error(f"Error deleting thread message: {e.response['error']}")
+                
+            time.sleep(1)
+
+    except Exception as e:
+        logging.error(f"Error fetching thread history: {e.response['error']}")
+
 
 def delete_thread_messages(channel_id, thread_ts):
     try:
