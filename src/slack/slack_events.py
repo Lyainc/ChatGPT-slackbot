@@ -154,7 +154,9 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     message["text"] = message["text"][len("!숨고"):].strip()
                     
                     notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
-                    prompt = f"{notion_cache}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼."
+                    prompt = f"""{notion_cache}\n 
+                    위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼.
+                    """
                     
                     user_conversations[user_id][thread_ts].append({
                         "role": "system",
@@ -166,7 +168,25 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     message["text"] = message["text"][len("!메뉴추천"):].strip()
         
                     notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-                    prompt = f"{notion_cache}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 데이터를 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼."
+                    prompt = f"""{notion_cache}\n
+                    * 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 세 곳을 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼. 원하는 메뉴가 없다면 없다고 솔직하게 이야기 해. 만야 사용자가 원하는 메뉴를 제공하는 식당이 세 곳 미만이면 그대로 출력해줘\n\n
+                    * 질문: {message["text"]}\n\n
+                    * 답변 예시
+                        1. [상호명]
+                        - 추천 메뉴: [추천 메뉴]
+                        - 이동 시간: [이동 시간]
+                        - 링크: [네이버 지도 바로가기]
+                        
+                        2. [상호명]
+                        - 대표 메뉴: [추천 메뉴]
+                        - 이동 시간: [이동 시간]
+                        - 링크: [네이버 지도 바로가기]
+                        
+                        3. [상호명]
+                        - 대표 메뉴: [추천 메뉴]
+                        - 이동 시간: [이동 시간]
+                        - 링크: [네이버 지도 바로가기]
+                    """
 
                     user_conversations[user_id][thread_ts].append({
                         "role": "system",
@@ -220,7 +240,7 @@ def delete_thread_messages(channel_id, thread_ts):
             except Exception as e:
                 logging.error(f"Error deleting thread message: {e.response['error']}")
                 
-            time.sleep(2)
+            time.sleep(1)
 
     except Exception as e:
         logging.error(f"Error fetching thread history: {e.response['error']}")

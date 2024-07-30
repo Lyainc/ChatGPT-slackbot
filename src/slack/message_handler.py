@@ -16,11 +16,17 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
     logging.info("Received an event")  # Logging the event receipt
     
     try:
-        if event.get("channel_type") != "im":
-            logging.info("Event is not a direct message. Ignoring.")
-            return
         
         global timer
+                
+        if event.get("channel_type") not in ["im", "channel", "group"]:
+           logging.info("Event is not a valid message type (DM, Channel, or Group). Ignoring.")
+           return
+       
+        if "text" not in event:
+            logging.warning("No text found in the event. Processing with default response.")
+            return
+        
         user_message = event["text"]
         user_id = event["user"]
         channel_id = event["channel"]
@@ -89,8 +95,25 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
             initial_message = say(text=":spinner: _추천 메뉴를 선택하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
             logging.info(f"Fetched data from Notion")
             notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-            prompt = f"{notion_cache}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 데이터를 추천해줘. 단 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼."
-            
+            prompt = f"""{notion_cache}\n
+            * 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 세 곳을 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼. 원하는 메뉴가 없다면 없다고 솔직하게 이야기 해. 만야 사용자가 원하는 메뉴를 제공하는 식당이 세 곳 미만이면 그대로 출력해줘\n\n
+            * 질문: {user_message}\n\n
+            * 답변 예시\n
+                1. [상호명]
+                - 추천 메뉴: [추천 메뉴]
+                - 이동 시간: [이동 시간]
+                - 링크: [네이버 지도 바로가기]
+                
+                2. [상호명]
+                - 대표 메뉴: [추천 메뉴]
+                - 이동 시간: [이동 시간]
+                - 링크: [네이버 지도 바로가기]
+                
+                3. [상호명]
+                - 대표 메뉴: [추천 메뉴]
+                - 이동 시간: [이동 시간]
+                - 링크: [네이버 지도 바로가기]
+            """
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt)
             app.client.chat_update(
                 channel=channel_id,
@@ -105,7 +128,9 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
             initial_message = say(text=":spinner: _Soomgo Notion을 확인하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
             logging.info(f"Fetched data from Notion")
             notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
-            prompt = f"{notion_cache}\n 위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼."
+            prompt = f"""{notion_cache}\n 
+            위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼.
+            """
             
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt)
             app.client.chat_update(
@@ -117,7 +142,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
         elif "text" in event and user_message.startswith("!대화삭제"):
             delete_thread_messages(channel_id, thread_ts)
 
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!메뉴추천", "!숨고", "!대화삭제"]:
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!대화삭제"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
             app.client.chat_update(
