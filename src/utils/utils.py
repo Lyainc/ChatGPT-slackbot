@@ -5,7 +5,7 @@ import sys
 import requests
 
 from slack_bolt import App
-from config.config import *
+from config.config import slack_bot_token, slack_signing_secret, default_openai_api_key, notion_integration_key
 
 TIMEOUT_INTERVAL = 36000  # 10시간
 timer = None
@@ -82,7 +82,7 @@ def check_notion_api() -> str:
     notion_status = "Notion API is operational."
     url = "https://api.notion.com/v1/pages/00387c791e4243a19dba4258ee09a1e1"
     headers = {
-        "Authorization": f"Bearer {notion_integration_token}", 
+        "Authorization": f"Bearer {notion_integration_key}", 
         "Notion-Version": "2022-06-28",  
         "Content-Type": "application/json"
     }

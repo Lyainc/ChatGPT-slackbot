@@ -3,10 +3,9 @@ import time
 import re
 
 from slack_bolt.app import App
-from utils.notion_utils import *
-from utils.utils import *
-from utils.openai_utils import *
-from config.config import *
+from utils.cache import load_cache, load_summarized_cache
+from utils.openai_utils import split_message_into_blocks, calculate_token_per_price, get_openai_response, user_conversations, user_conversations_lock
+from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, default_model, advanced_model
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)
@@ -15,7 +14,6 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     '''
     user에게 ChatGPT의 결과물을 반환합니다.
     '''
-    model = "gpt-4o-mini-2024-07-18"
     
     with user_conversations_lock:
         if user_id not in user_conversations:
@@ -33,7 +31,7 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     
     start_time = time.time()
     
-    response = get_openai_response(user_id, thread_ts, model, user_message)
+    response = get_openai_response(user_id, thread_ts, advanced_model, user_message)
   
     answer = response["answer"]
     prompt_tokens = response["prompt_tokens"]
@@ -49,7 +47,7 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     end_time = time.time()
     elapsed_time_ms = (end_time - start_time) * 1000
 
-    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, model)
+    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, default_model)
     current_time = time.localtime()
     formatted_time = time.strftime("%Y년 %m월 %d일 %H시 %M분 %S초", current_time)
 
@@ -63,6 +61,15 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
                         "text": ":soomgo_:  생성된 답변",
                         "emoji": True
                     }
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f":warning: ChatGPT를 통한 답변은 실제 내용과 다르거나 부정확할 수 있어 100% 사실을 담보하지 않습니다. 중요한 내용이라면 반드시 별도의 방법을 사용해 사실 관계를 확인해주세요."
+                        }
+                    ]
                 },
                 {
                     "type": "divider"
@@ -136,32 +143,14 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     
                     continue
                 
-                if message["text"].startswith("//대화시작"):
-                    message["text"] = message["text"][len("//대화시작"):].strip()
-                    user_message = message["text"]
-                    
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "system",
-                        "content": basic_prompt
-                    })
-                    
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "user",
-                        "content": user_message
-                    })
-                    continue
-                
                 if message["text"].startswith("!숨고"):
                     message["text"] = message["text"][len("!숨고"):].strip()
                     
                     notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
-                    prompt = f"""{notion_cache}\n 
-                    위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼. 요청 사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.
-                    """
-                    
+                    notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
                     user_conversations[user_id][thread_ts].append({
                         "role": "system",
-                        "content": prompt
+                        "content": notion_prompt
                     })
                     continue
                 
@@ -169,37 +158,24 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     message["text"] = message["text"][len("!메뉴추천"):].strip()
         
                     notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-                    prompt = f"""원본 데이터: \n```json{notion_cache}```\n
-                    * json 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 세 곳을 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼. 최대한 정확한 메뉴를 선정하되 메뉴의 유사도를 판단해서 순위를 매겨줘. 만약 사용자가 원하는 메뉴를 제공하는 식당이 세 곳 미만이면 그대로 출력해줘. 답변 양식을 비롯한 요청사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.\n\n
-                    * 답변 예시\n
-                        1. 상호명
-                        - 추천 메뉴: 
-                        - 이동 시간: 
-                        - 링크: [네이버 지도 바로가기]
-                        
-                        2. 상호명
-                        - 대표 메뉴: 
-                        - 이동 시간: 
-                        - 링크: [네이버 지도 바로가기]
-                        
-                        3. 상호명
-                        - 대표 메뉴: 
-                        - 이동 시간: 
-                        - 링크: [네이버 지도 바로가기]
-                    """
+                    menu_recommendation_prompt = f"""원본 데이터:\njson```{notion_cache}```\n{menu_recommendation_prompt_templete}"""
                     user_conversations[user_id][thread_ts].append({
                         "role": "system",
-                        "content": prompt
+                        "content": menu_recommendation_prompt
                     })
                     continue
                 
-                if message["text"].startswith(":robot_face:") or message["text"].startswith(":spinner:") or message["text"].startswith("//") or message["text"].startswith("!"):
+                if message["text"].startswith(":robot_face:") or message["text"].startswith(":spinner:") or message["text"].startswith("!"):
                     continue
                 
-                if message["user"] == "U076EJQTPNC" and message["blocks"][2]:
+                if message["user"] == "U076EJQTPNC" and message["blocks"]:
+                    for block in message["blocks"]:
+                        if block.get("type") == "section":
+                            section_text = block["text"]
+                            
                     user_conversations[user_id][thread_ts].append({
                         "role": "assistant",
-                        "content": message["blocks"][2]["text"]["text"]
+                        "content": section_text
                     })
                     continue
                 

@@ -1,9 +1,11 @@
 import logging
 from slack_bolt.app import App
 from typing import Any, Callable
-from config.config import *
-from utils.utils import *
-from slack.slack_events import *
+from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete
+from utils.utils import get_user_name, reset_timer, handle_exit_command, healthcheck_response
+from utils.openai_utils import user_conversations, user_conversations_lock
+from slack.slack_events import respond_to_user, recognize_conversation, delete_thread_messages
+from utils.cache import load_cache, load_summarized_cache
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
@@ -12,8 +14,15 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
     '''
     User가 입력한 메시지를 인식해 메시지의 내용에 따라 결과값을 반환합니다.
     '''
+       
+    def update_finsh_message(channel_id, message_ts):
+        app.client.chat_update(
+            channel=channel_id,
+            ts=message_ts,
+            text=f":robot_face: _답변이 완료되었습니다._",
+        )
     
-    logging.info("Received an event")  # Logging the event receipt
+    logging.info("Received an event")
     
     try:
         global timer
@@ -54,11 +63,8 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
             )
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
-            app.client.chat_update(
-                channel=channel_id,
-                ts=initial_message['ts'],
-                text=f":robot_face: _답변이 완료되었습니다._",
-            )
+            update_finsh_message(channel_id, initial_message['ts'])
+
         elif user_message == "!대화인식":
             say(":robot_face: _기존 대화 이력을 인식했습니다._", 
                 thread_ts=thread_ts
@@ -93,64 +99,48 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 
             initial_message = say(text=":spinner: _추천 메뉴를 선택하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
             logging.info(f"Fetched data from Notion")
+            
             notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-            prompt = f"""원본 데이터: \n```json{notion_cache}```\n
-            * json 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 세 곳을 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼. 최대한 정확한 메뉴를 선정하되 메뉴의 유사도를 판단해서 순위를 매겨줘. 만약 사용자가 원하는 메뉴를 제공하는 식당이 세 곳 미만이면 그대로 출력해줘. 답변 양식을 비롯한 요청사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.\n\n
-            * 답변 예시\n
-                1. 상호명
-                - 추천 메뉴: 
-                - 이동 시간: 
-                - 링크: [네이버 지도 바로가기]
-                
-                2. 상호명
-                - 대표 메뉴: 
-                - 이동 시간: 
-                - 링크: [네이버 지도 바로가기]
-                
-                3. 상호명
-                - 대표 메뉴: 
-                - 이동 시간: 
-                - 링크: [네이버 지도 바로가기]
-            """
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt)
-            app.client.chat_update(
-                channel=channel_id,
-                ts=initial_message['ts'],
-                text=f":robot_face: _답변이 완료되었습니다._",
-            )
+            menu_recommendation_prompt = f"원본 데이터: \n```json{notion_cache}```\n{menu_recommendation_prompt_templete}"
+            
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, menu_recommendation_prompt)
+            update_finsh_message(channel_id, initial_message['ts'])
             
         elif user_message.startswith("!숨고") or user_message == "!숨고":
             if user_message.startswith("!숨고"):
                 user_message = user_message[len("!숨고"):].strip()
                 
-            initial_message = say(text=":spinner: _Soomgo Notion을 확인하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
+            initial_message = say(
+                text=":spinner: _Soomgo Notion을 확인하고 있습니다._", 
+                thread_ts=thread_ts, 
+                mrkdwn=True, 
+                icon_emoji=True
+            ) 
             logging.info(f"Fetched data from Notion")
-            notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
-            prompt = f"""{notion_cache}\n 
-            위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼. 요청 사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.
-            """
             
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt)
-            app.client.chat_update(
-                channel=channel_id,
-                ts=initial_message['ts'],
-                text=f":robot_face: _답변이 완료되었습니다._",
-            )
+            notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
+            notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
+            
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt)
+            update_finsh_message(channel_id, initial_message['ts'])
             
         elif "text" in event and user_message.startswith("!대화삭제"):
             delete_thread_messages(channel_id, thread_ts)
 
         elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
-            app.client.chat_update(
-                channel=channel_id,
-                ts=initial_message['ts'],
-                text=f":robot_face: _답변이 완료되었습니다._",
-            )
-        
+            initial_content = user_conversations[user_id][thread_ts][0]["content"]
+            
+            if initial_content.startswith("!숨고") or initial_content in "!숨고" or initial_content.startswith("!메뉴추천") or initial_content in "!메뉴추천":
+                respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
+            else:
+                respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
+                
+            update_finsh_message(channel_id, initial_message['ts'])
+            
         elif event.get("channel_type") in ["im", "channel", "group"] and not user_message.startswith("!"):
             logging.info("Event is not a trigger message. Ignoring.")
+            
         else:
             logging.error("Cannot read conversation: ", exc_info=True)
             say(text=":robot_face: _ChatGPT가 대화를 인식하지 못했습니다._", 
@@ -161,3 +151,4 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
 
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
+ 
