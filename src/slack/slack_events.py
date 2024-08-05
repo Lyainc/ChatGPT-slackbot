@@ -31,7 +31,7 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     
     start_time = time.time()
     
-    response = get_openai_response(user_id, thread_ts, advanced_model, user_message)
+    response = get_openai_response(user_id, thread_ts, default_model, user_message)
   
     answer = response["answer"]
     prompt_tokens = response["prompt_tokens"]
@@ -171,7 +171,7 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                 if message["user"] == "U076EJQTPNC" and message["blocks"]:
                     for block in message["blocks"]:
                         if block.get("type") == "section":
-                            section_text = block["text"]
+                            section_text = block["text"].get("text")
                             
                     user_conversations[user_id][thread_ts].append({
                         "role": "assistant",

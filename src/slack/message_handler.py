@@ -118,7 +118,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
             ) 
             logging.info(f"Fetched data from Notion")
             
-            notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
+            notion_cache = list(load_summarized_cache().values())
             notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
             
             respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt)
@@ -127,19 +127,25 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
         elif "text" in event and user_message.startswith("!대화삭제"):
             delete_thread_messages(channel_id, thread_ts)
 
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천"]:
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천", "!도움말"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
             initial_content = user_conversations[user_id][thread_ts][0]["content"]
             
             if initial_content.startswith("!숨고") or initial_content in "!숨고" or initial_content.startswith("!메뉴추천") or initial_content in "!메뉴추천":
                 respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
             else:
-                respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
+                respond_to_user(user_id, user_name, thread_ts, user_message, say, basic_prompt)
                 
             update_finsh_message(channel_id, initial_message['ts'])
             
-        elif event.get("channel_type") in ["im", "channel", "group"] and not user_message.startswith("!"):
-            logging.info("Event is not a trigger message. Ignoring.")
+        elif "text" in event and user_message.startswith("!도움말"):
+            say(text=f"""
+                    _안녕하세요. {user_name}님! 숨고팀 챗봇입니다._\n\n_챗봇을 이용하시려면 명령어와 함께 질문을 입력해주세요._\n\n`!숨고` [사내 규정에 대한 질문] :arrow_right: `!숨고` 생일반차는 언제까지 쓰면 돼?\n`!메뉴추천` [숨고의 식탁/주변 맛집 추천 질문] :arrow_right: `!메뉴추천` 일식 먹고 싶어\n`!대화시작` [ChatGPT에게 자유로운 질문] :arrow_right: `!대화시작` 예가체프 커피에 대해 알려줘\n\n_두번째 질문부터는 명령어를 입력하지 않아도 주제에 맞게 자동으로 대화가 이어집니다._\n\n_대화를 끝내고 싶다면 `!대화종료`를, 이전 대화기록에 이어 대화하고 싶다면 `!대화인식`을 입력해주세요._
+                    """, 
+                thread_ts=thread_ts, 
+                mrkdwn=True, 
+                icon_emoji=True
+            )
             
         else:
             logging.error("Cannot read conversation: ", exc_info=True)

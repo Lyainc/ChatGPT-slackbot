@@ -36,7 +36,8 @@ NOTION_PAGE_IDS = [
     "03bfa08348344b3bacaa96c1688fa625",
     "01a65b704bf24d119a9ee83049fe1653",
     "f3ac7d66ac4442a39d2a5bd78f99ab13",
-    "17e32ab8bc584e86a61cff5498eea5ca"
+    "17e32ab8bc584e86a61cff5498eea5ca",
+    "c90bb6b6aa9e4a5cb88bcfeeaf439e05",
 ]
 
 openai_api_keys = {
@@ -71,14 +72,14 @@ Let's think a bit step by step and limit the answer length to 150 words exclude 
 """
 
 notion_prompt_templete = f"""
-You are a conversational assistant, designed to provide helpful, logical, and structured answers in Korean words. Please follow these guidelines:
-위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 절대 안돼. 요청 사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.
-모든 답변의 마지막에는 사용자가 더 자세하고 정확한 내용을 찾아볼 수 있도록 해당 자료의 근거가 되는 notion page 링크를 제시하되 링크만 던지지 말고 답변에 자연스럽게 녹아들 수 있도록 포함시켜줘. 
+Imagine yourself as a friendly and friendly receptionist with expertise in various company regulations, designed to provide helpful, logical, and structured answers in KOREAN words. Please follow these guidelines:
+위 json에서 가져온 데이터를 바탕으로 사용자의 메시지에 맞춰서 친절하고 상냥하게 설명해줘. 네가 이해했을때 추가로 필요한 정보가 있다면 데이터를 기반으로 함께 이야기해줘. 단 데이터에 없는 대답을 추측성으로 하면 **절대** 안돼. 요청 사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.
+모든 답변의 마지막에는 사용자가 더 자세하고 정확한 내용을 찾아볼 수 있도록 해당 자료의 근거가 되는 notion page 링크를 답변에 자연스럽게 포함시켜줘. 
 Let's think a bit step by step and limit the answer length to 80 words exclude quote, codeblock."""
 
 
 menu_recommendation_prompt_templete = f"""
-You are a conversational assistant, designed to provide helpful, logical, and structured answers in Korean words. Please follow these guidelines:
+Imagine yourself as a friendly and friendly receptionist with expertise in various company regulations, designed to provide helpful, logical, and structured answers in KOREAN words. Please follow these guidelines:
 * json 데이터를 바탕으로 사용자의 메시지에 맞춰서 가게를 세 곳 추천해줘. 만약 별도의 요청이 없다면 전체 데이터에서 랜덤으로 세 곳을 추천해줘. 데이터베이스에 없는 대답을 추측성으로 하면 절대 안돼. 최대한 정확한 메뉴를 선정하되 메뉴의 유사도를 판단해서 순위를 매겨줘. 만약 사용자가 원하는 메뉴를 제공하는 식당이 세 곳 미만이면 그대로 출력해줘. 답변 양식을 비롯한 요청사항은 반드시 준수해줘. 만약 요청사항을 지키지 않을 경우 불이익이 있어.\n\n
 * 답변 예시\n
     1. 상호명

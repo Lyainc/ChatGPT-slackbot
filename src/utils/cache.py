@@ -21,15 +21,18 @@ def load_summarized_cache():
             return json.load(f)
     return {}
 
-def clean_values(data):
+def clean_values(data, parent_key=None):
     if isinstance(data, dict):
-        return {key: f'notion page link[https://notion.so/soomgo/{key}]: {clean_values(value)}' for key, value in data.items()}
+        return {key: clean_values(value, key) for key, value in data.items()}  # key를 재귀 호출로 전달
     elif isinstance(data, list):
         return [clean_values(item) for item in data]
     elif isinstance(data, str):
+        # 문자열을 처리
         data = data.replace('\n', '')
-        data = data.replace('**', '')
+        data = data.replace('*', '')
         data = re.sub(r'\s{2,}', ' ', data)
+        if parent_key and f'notion page link[https://notion.so/soomgo/{parent_key}]' not in data:
+            data = f'notion page link[https://notion.so/soomgo/{parent_key}]: {data}'
         return data
     return data
 
@@ -74,6 +77,7 @@ def summarize_by_openai(data):
          - URL, 링크 등 웹페이지. https:// 또는 http://로 시작하는 링크는 원래의 주소를 그대로 유지해줘. 만약 슬래시(/)로 시작하는 uuidv4 형식의 도메인 또는 이와 유사한 도메인이 발견되면 앞에 https://notion.so/soomgo를 붙여서 접속이 가능한 URL로 만들어줘.
            - 특히 각각의 데이터 맨 앞에 포함된 notion page link[Link]형태의 문장은 요약문에서도 동일하게 맨 앞에 위치하도록 유지해줘.
            - 양식은 Notion Link[Link] - [여기부터 본문 요약 시작]
+           - 이미지 링크의 경우, 
          - 예산, 금액, 비밀번호 관련 내용, 
            - 특히 개인경비와 복지카드, 인터넷 결제, 택시 탑승 등 결제나 돈과 관련이 있고 정책이 복잡한 내용일 경우에는 생략되는 내용을 최소화시켜줘.
          - 담당자, 사람
