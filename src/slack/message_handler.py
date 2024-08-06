@@ -61,7 +61,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
                 mrkdwn=True, 
                 icon_emoji=True
             )
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt=basic_prompt)
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, basic_prompt)
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
             update_finsh_message(channel_id, initial_message['ts'])
 
@@ -129,13 +129,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]):
 
         elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천", "!도움말"]:
             initial_message = say(text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True)   
-            initial_content = user_conversations[user_id][thread_ts][0]["content"]
-            
-            if initial_content.startswith("!숨고") or initial_content in "!숨고" or initial_content.startswith("!메뉴추천") or initial_content in "!메뉴추천":
-                respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
-            else:
-                respond_to_user(user_id, user_name, thread_ts, user_message, say, basic_prompt)
-                
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
             update_finsh_message(channel_id, initial_message['ts'])
             
         elif "text" in event and user_message.startswith("!도움말"):

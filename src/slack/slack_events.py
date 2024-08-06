@@ -94,7 +94,7 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
                     ]
                 },
             ],
-        text='fallback text message',
+        text=block,
         thread_ts=thread_ts, 
         icon_emoji=True
     )
