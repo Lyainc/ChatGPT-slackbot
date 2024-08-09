@@ -140,7 +140,6 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                         "role": "user",
                         "content": user_message
                     })
-                    
                     continue
                 
                 if message["text"].startswith("!숨고"):
@@ -188,38 +187,6 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
               
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
-
-def delete_thread_messages(channel_id, thread_ts):
-    try:
-        # 스레드 메시지 히스토리 가져오기
-        result = app.client.conversations_replies(channel=channel_id, ts=thread_ts)
-        thread_messages = result["messages"]
-
-        # 각 스레드 메시지 삭제
-        for thread_message in reversed(thread_messages):
-            ts = thread_message["ts"]
-            user = thread_message["user"]
-            text_summary = thread_message.get("text", "")[:30]  # 메시지 앞 30자 요약
-
-            # 스레드 메시지 삭제 전에 로그 출력
-            logging.info(f"Deleting thread message: {text_summary}")
-
-            try:
-                if user == "U076EJQTPNC":
-                    # 봇이 만든 메시지 삭제
-                    app.client.chat_delete(channel=channel_id, ts=ts)
-                else:
-                    # 사용자가 만든 메시지 삭제
-                    user_app.client.chat_delete(channel=channel_id, ts=ts)
-                logging.info(f"Deleted thread message with ts: {ts}")
-            except Exception as e:
-                logging.error(f"Error deleting thread message: {e.response['error']}")
-                
-            time.sleep(1)
-
-    except Exception as e:
-        logging.error(f"Error fetching thread history: {e.response['error']}")
-
 
 def delete_thread_messages(channel_id, thread_ts):
     try:

@@ -1,15 +1,16 @@
 import logging
 import asyncio
+import json
 
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from typing import Any, Callable
 from utils.logger import stop_listener
-from utils.cache import *
-from slack.slack_events import *
-from config.config import *
+from utils.cache import summary_cache, SUMMARY_CACHE_FILE
+from slack.slack_events import load_summarized_cache
+from config.config import slack_bot_token, slack_app_token, slack_signing_secret, NOTION_PAGE_IDS
 from slack.message_handler import handle_message_event
-from utils.notion_utils import *
+from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
@@ -41,7 +42,6 @@ async def preload_notion_data():
         summarized_data = summary_cache()
         with open(SUMMARY_CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(summarized_data, f, ensure_ascii=False, indent=4)
-
 
 @app.event("message")
 def message_handler(event: dict[str, Any], say: Callable[..., None]):

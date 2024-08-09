@@ -11,14 +11,23 @@ cached_data = load_cache()
 def fetch_notion_restaurant_data (database_id: str) -> dict:
 
     response = app.databases.query(database_id)
-
     results_list = []
-
+    comments = []
+    
     for result in response['results']:
-        time = result['properties']['이동 시간']['rich_text'][0]['text']['content']
-        link = result['properties']['링크']['rich_text'][0]['text']['link']['url']
-        type = result['properties']['구분']['title'][0]['text']['content']
-        name = result['properties']['상호명']['rich_text'][0]['text']['content']
+        page_id = result['id']
+        
+        if not cached_data:
+            comments_response = app.comments.list(block_id=page_id)
+
+            for comment in comments_response.get('results', []):
+                for rich_text in comment.get('rich_text', []):
+                    comments.append(rich_text.get('plain_text', ''))  # `plain_text` 추출
+    
+        time = result['properties']['이동 시간']['select']['name']
+        link = result['properties']['위치']['url']
+        type = result['properties']['음식 종류']['select']['name']
+        name = result['properties']['가게 이름']['title'][0]['text']['content']
         menu = result['properties']['추천 메뉴']['rich_text'][0]['text']['content']
 
         result_dict = {
@@ -26,7 +35,8 @@ def fetch_notion_restaurant_data (database_id: str) -> dict:
             '구분': type,
             '추천 메뉴': menu,
             '이동 시간': time,
-            '링크': link
+            '링크': link,
+            '후기': comments
         }
         
         results_list.append(result_dict)

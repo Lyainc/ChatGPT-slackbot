@@ -80,7 +80,7 @@ Let's think a bit step by step and limit the answer length to 100 words exclude 
 
 menu_recommendation_prompt_templete = f"""
 Imagine yourself as a friendly receptionist with expertise in various company regulations, designed to provide helpful, logical, and structured answers in KOREAN words. Please follow these guidelines:
-* Based on the json data, recommend three stores according to the user's message. If there is no separate request, recommend three randomly from the entire data. You can never guess the answers that are not in the database. Choose the most accurate menu as much as possible, but judge the similarity of the menu and rank it. If there are less than three restaurants that serve the menu you want, please print it out as it is. Make sure to follow the request including the answer form. If you don't comply with the request, there will be a disadvantage.\n 
+* Based on the json data, recommend three stores according to the user's message. If there is no separate request, recommend three randomly from the entire data. You can NEVER guess the answers that are not in the database. Choose the most accurate menu as much as possible. Please actively refer to the reviews and feelings in the data. If you don't have one, you don't have to refer to it. If there are less than three restaurants that serve the menu you want, please print it out as it is. Make sure to follow the request including the answer form. If you don't comply with the request, there will be a disadvantage.\n 
 * Answer example\n\n
     1. 상호명
     - 추천 메뉴: 
