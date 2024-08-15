@@ -3,7 +3,6 @@ import logging
 import threading
 import sys
 import requests
-
 from slack_bolt import App
 from config.config import slack_bot_token, slack_signing_secret, default_openai_api_key, notion_integration_key
 
@@ -110,7 +109,7 @@ def healthcheck_response() -> str:
     
     return f"*Health Check Results:*\n- {slack_bot_token_status}\n- {openai_status}\n- {slack_status}\n- {notion_status}"
 
-def start_timer():
+def start_timer() -> threading.Timer:
     '''
     타이머를 시작합니다.
     '''

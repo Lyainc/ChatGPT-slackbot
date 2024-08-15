@@ -2,7 +2,7 @@ import openai
 import threading
 import logging
 from slack_bolt import App
-from config.config import slack_bot_token, slack_signing_secret, openai_api_keys, basic_prompt
+from config.config import slack_bot_token, slack_signing_secret, default_openai_api_key, basic_prompt
 
 user_conversations = {}
 user_conversations_lock = threading.Lock()
@@ -17,6 +17,8 @@ def calculate_token_per_price(question_token: int, answer_token: int, model_name
     try:
         if model_name == "gpt-4o-mini-2024-07-18":
             total_price = question_token * 0.00015 / 1000 + answer_token * 0.0006 / 1000
+        elif model_name == "gpt-4o-2024-08-06":
+            total_price = question_token * 0.0025 / 1000 + answer_token * 0.01 / 1000
     except Exception as e:
             logging.error(f"Model is not vaild : {e}", exc_info=True)
             total_price = 0
@@ -27,12 +29,12 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
     OpenAI API를 사용해 data를 가져옵니다.
     """
     try:
-        api_key = openai_api_keys.get(user_id)
+        api_key = default_openai_api_key
         
         if api_key:
             openai_client = openai.OpenAI(api_key=api_key)
-            masked_api_key = '-'.join(api_key.split('-')[:3])
-            logging.info(f"Using OpenAI API Key(Masked): {masked_api_key}...")
+            # masked_api_key = '-'.join(api_key.split('-')[:3])
+            # logging.info(f"Using OpenAI API Key(Masked): {masked_api_key}...")
             
             with user_conversations_lock:
                 

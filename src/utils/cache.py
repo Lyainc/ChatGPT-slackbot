@@ -3,25 +3,24 @@ import os
 import openai
 import re
 import logging
-
-from config.config import default_openai_api_key, default_model, advanced_model
+from config.config import default_openai_api_key, advanced_model
 
 CACHE_FILE = 'notion_cache.json'
 SUMMARY_CACHE_FILE = 'summary_cache.json'
 
-def load_cache():
+def load_cache() -> dict:
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {}
 
-def load_summarized_cache():
+def load_summarized_cache() -> dict:
     if os.path.exists(SUMMARY_CACHE_FILE):
         with open(SUMMARY_CACHE_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {}
 
-def clean_values(data, parent_key=None):
+def clean_values(data: str, parent_key=None) -> str:
     if isinstance(data, dict):
         return {key: clean_values(value, key) for key, value in data.items()}  # key를 재귀 호출로 전달
     elif isinstance(data, list):
@@ -36,7 +35,7 @@ def clean_values(data, parent_key=None):
         return data
     return data
 
-def save_cache(data):
+def save_cache(data: str) -> None:
     clean_data = clean_values(data)
     cache_exists = os.path.exists(CACHE_FILE)
     summary_cache_exists = os.path.exists(SUMMARY_CACHE_FILE)
@@ -54,7 +53,7 @@ def save_cache(data):
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(clean_data, f, ensure_ascii=False, indent=4)
 
-def summary_cache():
+def summary_cache() -> str:
     notion_cache = load_cache()
     summarized_data = {}
 
@@ -65,7 +64,7 @@ def summary_cache():
         
     return summarized_data
 
-def summarize_by_openai(data):
+def summarize_by_openai(data: str) -> str:
     
     api_key = default_openai_api_key
     openai_client = openai.OpenAI(api_key=api_key)

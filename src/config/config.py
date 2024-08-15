@@ -11,7 +11,7 @@ default_openai_api_key = os.getenv('DEFAULT_OPENAI_API_KEY')
 notion_integration_key = os.getenv('NOTION_INTEGRATION_KEY')
 
 default_model = "gpt-4o-mini-2024-07-18"
-advanced_model = "gpt-4o-2024-05-13"
+advanced_model = "gpt-4o-2024-08-06"
 
 NOTION_PAGE_IDS = [
     "dcaf6463dc8b4dfbafa6eafe6ea3881c",
@@ -40,11 +40,11 @@ NOTION_PAGE_IDS = [
     "c90bb6b6aa9e4a5cb88bcfeeaf439e05",
 ]
 
-openai_api_keys = {
-    key[len('OPEN_AI_API_USER_'):]: value 
-    for key, value in os.environ.items() 
-    if key.startswith('OPEN_AI_API_USER_')
-}
+# openai_api_keys = {
+#     key[len('OPEN_AI_API_USER_'):]: value 
+#     for key, value in os.environ.items() 
+#     if key.startswith('OPEN_AI_API_USER_')
+# }
 
 required_env_vars = [slack_app_token, slack_bot_token, slack_signing_secret, default_openai_api_key]
 if not all(required_env_vars):

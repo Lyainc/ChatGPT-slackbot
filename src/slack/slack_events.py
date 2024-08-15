@@ -1,16 +1,15 @@
 import logging
 import time
 import re
-
 from slack_bolt.app import App
 from utils.cache import load_cache, load_summarized_cache
 from utils.openai_utils import split_message_into_blocks, calculate_token_per_price, get_openai_response, user_conversations, user_conversations_lock
-from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, default_model, advanced_model
+from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, advanced_model
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)
 
-def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str):
+def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str) -> None:
     '''
     user에게 ChatGPT의 결과물을 반환합니다.
     '''
@@ -30,8 +29,7 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
     
     start_time = time.time()
-    
-    response = get_openai_response(user_id, thread_ts, default_model, user_message)
+    response = get_openai_response(user_id, thread_ts, advanced_model, user_message)
   
     answer = response["answer"]
     prompt_tokens = response["prompt_tokens"]
@@ -46,8 +44,8 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     
     end_time = time.time()
     elapsed_time_ms = (end_time - start_time) * 1000
-
-    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, default_model)
+    
+    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, advanced_model)
     current_time = time.localtime()
     formatted_time = time.strftime("%Y년 %m월 %d일 %H시 %M분 %S초", current_time)
 
@@ -111,12 +109,18 @@ def read_conversation_history(channel_id: str, thread_ts: str) -> list:
     messages = conversation.get("messages", [])
     return messages
 
-def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
+def recognize_conversation(user_id: str, thread_ts: str, channel_id: str) -> None:
     '''
     thread의 대화 내용을 dictionary에 저장합니다.
     '''
     conversation_history = read_conversation_history(channel_id, thread_ts)
     
+    def append_user_message(role: str, content: str) -> None:
+        user_conversations[user_id][thread_ts].append({
+            "role": role,
+            "content": content
+        })
+
     try:
         with user_conversations_lock:
         # 대화 딕셔너리 조회 및 생성
@@ -131,15 +135,8 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     message["text"] = message["text"][len("!대화시작"):].strip()
                     user_message = message["text"]
                     
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "system",
-                        "content": basic_prompt
-                    })
-                    
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "user",
-                        "content": user_message
-                    })
+                    append_user_message("system", basic_prompt)
+                    append_user_message("user", user_message)
                     continue
                 
                 if message["text"].startswith("!숨고"):
@@ -147,10 +144,7 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     
                     notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
                     notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "system",
-                        "content": notion_prompt
-                    })
+                    append_user_message("system", notion_prompt)
                     continue
                 
                 if message["text"].startswith("!메뉴추천"):
@@ -158,10 +152,7 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
         
                     notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
                     menu_recommendation_prompt = f"""원본 데이터:\njson```{notion_cache}```\n{menu_recommendation_prompt_templete}"""
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "system",
-                        "content": menu_recommendation_prompt
-                    })
+                    append_user_message("system", menu_recommendation_prompt)
                     continue
                 
                 if message["text"].startswith(":robot_face:") or message["text"].startswith(":spinner:") or message["text"].startswith("!"):
@@ -171,24 +162,17 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str):
                     for block in message["blocks"]:
                         if block.get("type") == "section":
                             section_text = block["text"].get("text")
-                            
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "assistant",
-                        "content": section_text
-                    })
+                    append_user_message("assistant", section_text)        
                     continue
                 
                 if message["user"] == user_id and not message["text"].startswith("!"):
-                    user_conversations[user_id][thread_ts].append({
-                        "role": "user",
-                        "content": message["text"]
-                    }) 
+                    append_user_message("user", message["text"])                     
                     continue
               
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
 
-def delete_thread_messages(channel_id, thread_ts):
+def delete_thread_messages(channel_id, thread_ts) -> None:
     try:
         # 스레드 메시지 히스토리 가져오기
         result = app.client.conversations_replies(channel=channel_id, ts=thread_ts)

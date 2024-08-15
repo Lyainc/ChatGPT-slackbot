@@ -1,11 +1,10 @@
 import notion_client
 import json
-
 from concurrent.futures import ThreadPoolExecutor
 from config.config import notion_integration_key
 from utils.cache import load_cache, save_cache
-
 app = notion_client.Client(auth=notion_integration_key)
+
 cached_data = load_cache()
 
 def fetch_notion_restaurant_data (database_id: str) -> dict:
@@ -47,7 +46,7 @@ def fetch_notion_restaurant_data (database_id: str) -> dict:
 
     return json_results
 
-def fetch_notion_page_data(page_id):
+def fetch_notion_page_data(page_id: str) -> str:
     """
     Notion 페이지의 모든 텍스트를 가져옵니다.
     """
@@ -57,7 +56,7 @@ def fetch_notion_page_data(page_id):
 
     visited_synced_blocks = set()
 
-    def get_text_recursive(block_id):
+    def get_text_recursive(block_id: str) -> str:
         children = app.blocks.children.list(block_id=block_id).get("results", [])
         texts = []
 
@@ -71,7 +70,7 @@ def fetch_notion_page_data(page_id):
 
         return "\n".join(texts)
 
-    def process_block(block):
+    def process_block(block: str) -> str:
         block_type = block['type']
         texts = []
 
@@ -89,7 +88,7 @@ def fetch_notion_page_data(page_id):
 
         return "\n".join(texts)  # 모든 텍스트를 줄바꿈으로 결합하여 반환
 
-    def extract_plain_text(rich_texts):
+    def extract_plain_text(rich_texts: str) -> str:
         """
         rich_text에서 유저 멘션, 링크, synced_block의 텍스트를 추출합니다.
         """
@@ -120,7 +119,7 @@ def fetch_notion_page_data(page_id):
 
         return linked_text
 
-    def get_text_from_synced_block(synced_block_id):
+    def get_text_from_synced_block(synced_block_id: str) -> str:
         """
         Extracts text from within a synced block.
         """

@@ -1,7 +1,6 @@
 import logging
 import asyncio
 import json
-
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from typing import Any, Callable
@@ -17,7 +16,7 @@ app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 # 전역 데이터 캐시 딕셔너리 선언
 notion_data_cache = {}
 
-async def preload_notion_data():
+async def preload_notion_data() -> None:
     global notion_data_cache
     summarized_data = {}
     
@@ -44,10 +43,10 @@ async def preload_notion_data():
             json.dump(summarized_data, f, ensure_ascii=False, indent=4)
 
 @app.event("message")
-def message_handler(event: dict[str, Any], say: Callable[..., None]):
+def message_handler(event: dict[str, Any], say: Callable[..., None]) -> None:
     handle_message_event(event, say)
 
-def start_bot():
+def start_bot() -> None:
     try:
         logging.info("Starting Slack bot")
         # 데이터 미리 로딩 시작
