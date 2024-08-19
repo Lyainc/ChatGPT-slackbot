@@ -173,6 +173,9 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str) -> Non
         logging.error("Unexpected error:", exc_info=True)
 
 def delete_thread_messages(channel_id, thread_ts) -> None:
+    '''
+    thread의 대화 내용을 삭제합니다.
+    '''
     try:
         # 스레드 메시지 히스토리 가져오기
         result = app.client.conversations_replies(channel=channel_id, ts=thread_ts)

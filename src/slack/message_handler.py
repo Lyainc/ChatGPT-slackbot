@@ -2,7 +2,7 @@ import logging
 from slack_bolt.app import App
 from typing import Any, Callable
 from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete
-from utils.utils import get_user_name, reset_timer, handle_exit_command, healthcheck_response
+from utils.utils import get_user_name, healthcheck_response
 from utils.openai_utils import user_conversations, user_conversations_lock
 from slack.slack_events import respond_to_user, recognize_conversation, delete_thread_messages
 from utils.cache import load_cache, load_summarized_cache
@@ -33,7 +33,6 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
     logging.info("Received an event")
     
     try:
-        global timer
                 
         if event.get("channel_type") not in ["im", "channel", "group"]:
            logging.info("Event is not a valid message type (DM, Channel, or Group). Ignoring.")
@@ -53,7 +52,6 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
             say_message(":robot_face: _사용자 이름을 가져오지 못했습니다._", thread_ts)
         
         logging.info(f"Received message: {user_message}")
-        timer = reset_timer()
         
         if user_message.startswith("!대화시작"):
             user_message = user_message[len("!대화시작"):].strip()
@@ -73,10 +71,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
                 if user_id in user_conversations and thread_ts in user_conversations[user_id]:
                     del user_conversations[user_id][thread_ts]
                 say_message(":robot_face: _대화를 종료합니다._", thread_ts)
-                logging.info(f"Ended conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
-
-        elif user_message == "!슬랙봇종료":
-            handle_exit_command(user_name)    
+                logging.info(f"Ended conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}") 
 
         elif user_message == "!healthcheck":
             healthcheck_results = healthcheck_response()
@@ -111,7 +106,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
         elif "text" in event and user_message.startswith("!대화삭제"):
             delete_thread_messages(channel_id, thread_ts)
 
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화종료", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천", "!도움말"]:
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천", "!도움말"]:
             initial_message = say_message(":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", thread_ts)
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
             update_finsh_message(channel_id, initial_message['ts'])

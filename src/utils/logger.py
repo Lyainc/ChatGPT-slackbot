@@ -30,5 +30,8 @@ root_logger.addHandler(queue_handler)
 queue_listener.start()
 
 def stop_listener():
+    '''
+    logging listener를 중지합니다.
+    '''
     logging.info("Shutting down QueueListener")
     queue_listener.stop()

@@ -8,7 +8,9 @@ app = notion_client.Client(auth=notion_integration_key)
 cached_data = load_cache()
 
 def fetch_notion_restaurant_data (database_id: str) -> dict:
-
+    '''
+    Notion의 식당 데이터를 fetch합니다.
+    '''
     response = app.databases.query(database_id)
     results_list = []
     comments = []
@@ -80,13 +82,12 @@ def fetch_notion_page_data(page_id: str) -> str:
             texts.append(" ".join(plain_text))
 
         if block.get('has_children', False):
-            texts.append(get_text_recursive(block['id']))  # 자식 블록 재귀 호출
+            texts.append(get_text_recursive(block['id']))
 
-        # Handle column_list and column blocks
         if block_type in ["column_list", "column"]:
-            texts.append(get_text_recursive(block['id']))  # 자식 블록 재귀 호출
+            texts.append(get_text_recursive(block['id']))
 
-        return "\n".join(texts)  # 모든 텍스트를 줄바꿈으로 결합하여 반환
+        return "\n".join(texts)
 
     def extract_plain_text(rich_texts: str) -> str:
         """
@@ -102,7 +103,7 @@ def fetch_notion_page_data(page_id: str) -> str:
             elif 'synced_block' in text:
                 synced_block_id = text['synced_block']['synced_from']['block_id']
                 if synced_block_id not in visited_synced_blocks:
-                    visited_synced_blocks.add(synced_block_id)  # Avoid duplication
+                    visited_synced_blocks.add(synced_block_id)
                     linked_text.append(get_text_from_synced_block(synced_block_id))
             elif 'text' in text:
                 text_url = text['text'].get('link', {})
@@ -121,7 +122,7 @@ def fetch_notion_page_data(page_id: str) -> str:
 
     def get_text_from_synced_block(synced_block_id: str) -> str:
         """
-        Extracts text from within a synced block.
+        rich_text에서 synced_block의 텍스트를 재귀 호출하여 추출합니다.
         """
         synced_block = app.blocks.retrieve(synced_block_id)
         children = synced_block["synced_block"]["children"]
@@ -133,11 +134,9 @@ def fetch_notion_page_data(page_id: str) -> str:
 
         return "\n".join(plain_texts)
 
-    # Fetch data through API
     data = get_text_recursive(page_id)
 
-    # Save to cache
     cached_data[page_id] = data
-    save_cache(cached_data)  # Ensure the cache is saved
+    save_cache(cached_data)
 
     return data

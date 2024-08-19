@@ -6,9 +6,6 @@ import requests
 from slack_bolt import App
 from config.config import slack_bot_token, slack_signing_secret, default_openai_api_key, notion_integration_key
 
-TIMEOUT_INTERVAL = 36000  # 10시간
-timer = None
-
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
 def get_user_name(app, user_id) -> str:
@@ -108,35 +105,3 @@ def healthcheck_response() -> str:
     notion_status = check_notion_api()
     
     return f"*Health Check Results:*\n- {slack_bot_token_status}\n- {openai_status}\n- {slack_status}\n- {notion_status}"
-
-def start_timer() -> threading.Timer:
-    '''
-    타이머를 시작합니다.
-    '''
-    global timer
-    timer = threading.Timer(TIMEOUT_INTERVAL, force_shutdown)
-    timer.start()
-    return timer
-
-def reset_timer():
-    '''
-    타이머를 리셋합니다.
-    '''
-    global timer
-    if timer is not None:
-        timer.cancel()
-    return start_timer()
-
-def force_shutdown(*args):
-    '''
-    봇을 강제종료합니다.
-    '''
-    logging.info("Force shutdown by function")
-    sys.exit(0)
-
-def handle_exit_command(user_name: str):
-    '''
-    command를 입력한 user name을 반환합니다.
-    '''
-    logging.info(f"Force shutdown by user: {user_name}")
-    sys.exit(0)
