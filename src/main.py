@@ -4,11 +4,12 @@ import json
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from typing import Any, Callable
+from utils.utils import get_user_name
 from utils.logger import stop_listener
 from utils.cache import summary_cache, SUMMARY_CACHE_FILE
 from slack.slack_events import load_summarized_cache
 from config.config import slack_bot_token, slack_app_token, slack_signing_secret, NOTION_PAGE_IDS
-from slack.message_handler import handle_message_event
+from slack.message_handler import process_message
 from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
@@ -43,8 +44,27 @@ async def preload_notion_data() -> None:
             json.dump(summarized_data, f, ensure_ascii=False, indent=4)
 
 @app.event("message")
-def message_handler(event: dict[str, Any], say: Callable[..., None]) -> None:
-    handle_message_event(event, say)
+def handle_message_event(event, say):
+    # 메시지가 멘션을 포함하지 않는 경우만 처리
+    if "text" in event and f"<@{app.client.auth_test()['user_id']}>" not in event["text"]:
+        process_message(event, say)
+
+# app_mention 이벤트 핸들러 등록
+@app.event("app_mention")
+def handle_app_mention_event(event, say):
+    # 멘션된 경우 메시지 처리
+    process_message(event, say)
+    
+@app.event("member_joined_channel")
+def handle_member_joined_channel_events(event, say):
+    if event["user"] == "U076EJQTPNC":
+        say(
+            text=f"""
+                _안녕하세요! 숨고팀 챗봇입니다._\n\n_챗봇을 이용하시려면 명령어와 함께 질문을 입력해주세요._\n\n`!숨고` [사내 규정에 대한 질문] :arrow_right: `!숨고` 생일반차는 언제까지 쓰면 돼?\n`!메뉴추천` [숨고의 식탁/주변 맛집 추천 질문] :arrow_right: `!메뉴추천` 일식 먹고 싶어\n`!대화시작` [ChatGPT에게 자유로운 질문] :arrow_right: `!대화시작` 예가체프 커피에 대해 알려줘\n\n_두번째 질문부터는 명령어를 입력하지 않아도 주제에 맞게 자동으로 대화가 이어집니다._\n\n_대화를 끝내고 싶다면 `!대화종료`를, 이전 대화기록에 이어 대화하고 싶다면 `!대화인식`을 입력해주세요._
+                """, 
+            mrkdwn=True, 
+            icon_emoji=True
+        )
 
 def start_bot() -> None:
     try:

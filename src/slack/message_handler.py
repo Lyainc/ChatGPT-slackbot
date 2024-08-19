@@ -9,12 +9,10 @@ from utils.cache import load_cache, load_summarized_cache
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
-@app.event("message")
-def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str:
+def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
     '''
     User가 입력한 메시지를 인식해 메시지의 내용에 따라 결과값을 반환합니다.
     '''
-       
     def update_finsh_message(channel_id: str, message_ts: str) -> None:
         app.client.chat_update(
             channel=channel_id,
@@ -25,10 +23,6 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
     logging.info("Received an event")
     
     try:
-                
-        if event.get("channel_type") not in ["im", "channel", "group"]:
-           logging.info("Event is not a valid message type (DM, Channel, or Group). Ignoring.")
-           return
        
         if "text" not in event:
             logging.warning("No text found in the event. Processing with default response.")
@@ -50,8 +44,11 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
         
         logging.info(f"Received message: {user_message}")
         
-        if user_message.startswith("!대화시작"):
-            user_message = user_message[len("!대화시작"):].strip()
+        if "@U076EJQTPNC" in user_message:
+            user_message = user_message.replace("<@U076EJQTPNC>", "")
+    
+        if user_message.startswith("!대화시작") or event["type"] == "app_mention":
+            user_message = user_message.replace("!대화시작", "")
             initial_message = say(
                 text=f":robot_face: _안녕하세요 {user_name}님!_ \n:spinner: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
@@ -83,9 +80,13 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
 
         elif user_message == "!healthcheck":
             healthcheck_results = healthcheck_response()
-            say_message(healthcheck_results, thread_ts)
+            say(text=healthcheck_results, 
+                thread_ts=thread_ts, 
+                mrkdwn=True, 
+                icon_emoji=True
+            )
             
-        elif user_message.startswith("!메뉴추천") or user_message == "!메뉴추천":
+        elif user_message.startswith("!메뉴추천") or "!메뉴추천" in user_message:
             if user_message.startswith("!메뉴추천"):
                 user_message = user_message[len("!메뉴추천"):].strip()
                 
@@ -98,7 +99,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
             respond_to_user(user_id, user_name, thread_ts, user_message, say, menu_recommendation_prompt)
             update_finsh_message(channel_id, initial_message['ts'])
             
-        elif user_message.startswith("!숨고") or user_message == "!숨고":
+        elif user_message.startswith("!숨고") or "!숨고" in user_message:
             if user_message.startswith("!숨고"):
                 user_message = user_message[len("!숨고"):].strip()
                 
@@ -129,7 +130,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
             update_finsh_message(channel_id, initial_message['ts'])
             
-        elif "text" in event and user_message.startswith("!도움말"):
+        elif "text" in event and "!도움말" in user_message:
             say(text=f"""
                     _안녕하세요. {user_name}님! 숨고팀 챗봇입니다._\n\n_챗봇을 이용하시려면 명령어와 함께 질문을 입력해주세요._\n\n`!숨고` [사내 규정에 대한 질문] :arrow_right: `!숨고` 생일반차는 언제까지 쓰면 돼?\n`!메뉴추천` [숨고의 식탁/주변 맛집 추천 질문] :arrow_right: `!메뉴추천` 일식 먹고 싶어\n`!대화시작` [ChatGPT에게 자유로운 질문] :arrow_right: `!대화시작` 예가체프 커피에 대해 알려줘\n\n_두번째 질문부터는 명령어를 입력하지 않아도 주제에 맞게 자동으로 대화가 이어집니다._\n\n_대화를 끝내고 싶다면 `!대화종료`를, 이전 대화기록에 이어 대화하고 싶다면 `!대화인식`을 입력해주세요._
                     """, 
@@ -137,7 +138,7 @@ def handle_message_event(event: dict[str, Any], say: Callable[..., None]) -> str
                 mrkdwn=True, 
                 icon_emoji=True
             )
-            
+                
         else:
             logging.error("Cannot read conversation: ", exc_info=True)
             say(text=":robot_face: _ChatGPT가 대화를 인식하지 못했습니다._", 
