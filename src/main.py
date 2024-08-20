@@ -46,7 +46,7 @@ async def preload_notion_data() -> None:
 @app.event("message")
 def handle_message_event(event, say):
     # 메시지가 멘션을 포함하지 않는 경우만 처리
-    if "text" in event and f"<@{app.client.auth_test()['user_id']}>" not in event["text"]:
+    if "text" in event and f"<@U076EJQTPNC>" not in event["text"]:
         process_message(event, say)
 
 # app_mention 이벤트 핸들러 등록

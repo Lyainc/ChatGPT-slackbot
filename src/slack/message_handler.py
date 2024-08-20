@@ -38,20 +38,54 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
         if "@U076EJQTPNC" in user_message:
             user_message = user_message.replace("<@U076EJQTPNC>", "")
             logging.info(f"Received message: {user_message}")
-    
-        if user_message.startswith("!대화시작") or event["type"] == "app_mention":
-            user_message = user_message.replace("!대화시작", "")
-            logging.info(f"Received message: {user_message}")
-            initial_message = say(
-                text=f":robot_face: _안녕하세요 {user_name}님!_ \n:spinner: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
-                thread_ts=thread_ts, 
-                mrkdwn=True, 
-                icon_emoji=True
-            )
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, basic_prompt)
+
+        if "!대화시작" in user_message or event["type"] == "app_mention":
+            if "!숨고" in user_message:
+                logging.info(f"Received message: {user_message}")    
+                initial_message = say(
+                    text=":spinner: _Soomgo Notion을 확인하고 있습니다._", 
+                    thread_ts=thread_ts, 
+                    mrkdwn=True, 
+                    icon_emoji=True
+                ) 
+                logging.info(f"Fetched data from Notion")
+                notion_cache = list(load_summarized_cache().values())
+                notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
+                
+                respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt)
+            elif "!콘텐츠정책" in user_message:
+                logging.info(f"Received message: {user_message}")
+                initial_message = say(
+                    text=":spinner: _콘텐츠 정책을 확인하고 있습니다._", 
+                    thread_ts=thread_ts, 
+                    mrkdwn=True, 
+                    icon_emoji=True
+                ) 
+                logging.info(f"Fetched data from policy")
+                respond_to_user(user_id, user_name, thread_ts, user_message, say, policy_prompt_template)
+            elif "!메뉴추천" in user_message:
+                logging.info(f"Received message: {user_message}")                
+                initial_message = say(
+                    text=":spinner: _추천 메뉴를 선택하고 있습니다._", 
+                    thread_ts=thread_ts, 
+                    mrkdwn=True, 
+                    icon_emoji=True
+                ) 
+                logging.info(f"Fetched data from Notion")
+                respond_to_user(user_id, user_name, thread_ts, user_message, say, menu_recommendation_prompt)
+            else:
+                logging.info(f"Received message: {user_message}")
+                initial_message = say(
+                    text=f":robot_face: _안녕하세요 {user_name}님!_ \n:spinner: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
+                    thread_ts=thread_ts, 
+                    mrkdwn=True, 
+                    icon_emoji=True
+                )
+                respond_to_user(user_id, user_name, thread_ts, user_message, say, basic_prompt)
+
             logging.info(f"Started conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
             update_finsh_message(channel_id, initial_message['ts'])
-
+            
         elif user_message == "!대화인식":
             say(":robot_face: _기존 대화 이력을 인식했습니다._", 
                 thread_ts=thread_ts
@@ -79,12 +113,14 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 icon_emoji=True
             )
             
-        elif "!메뉴추천" in user_message:
-            if user_message.startswith("!메뉴추천"):
-                user_message = user_message.replace("!메뉴추천", "")
-
+        elif user_message.startswith("!메뉴추천"):
             logging.info(f"Received message: {user_message}")                
-            initial_message = say(text=":spinner: _추천 메뉴를 선택하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
+            initial_message = say(
+                text=":spinner: _추천 메뉴를 선택하고 있습니다._", 
+                thread_ts=thread_ts, 
+                mrkdwn=True, 
+                icon_emoji=True
+            ) 
             logging.info(f"Fetched data from Notion")
             
             notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
@@ -93,9 +129,7 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
             respond_to_user(user_id, user_name, thread_ts, user_message, say, menu_recommendation_prompt)
             update_finsh_message(channel_id, initial_message['ts'])
             
-        elif "!숨고" in user_message:
-            if user_message.startswith("!숨고"):
-                user_message = user_message.replace("!숨고", "")
+        elif user_message.startswith("!숨고"):
             logging.info(f"Received message: {user_message}")    
             initial_message = say(
                 text=":spinner: _Soomgo Notion을 확인하고 있습니다._", 
@@ -111,9 +145,7 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
             respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt)
             update_finsh_message(channel_id, initial_message['ts']) 
          
-        elif "!콘텐츠정책" in user_message:
-            if user_message.startswith("!콘텐츠정책"):
-                user_message = user_message.replace("!콘텐츠정책", "")
+        elif user_message.startswith("!콘텐츠정책"):
             logging.info(f"Received message: {user_message}")
             initial_message = say(
                 text=":spinner: _콘텐츠 정책을 확인하고 있습니다._", 
@@ -129,7 +161,7 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
         elif "text" in event and user_message.startswith("!대화삭제"):
             delete_thread_messages(channel_id, thread_ts)
 
-        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천", "!도움말"]:
+        elif "thread_ts" in event and user_message not in ["!슬랙봇종료", "!healthcheck", "!대화시작", "!대화인식", "!대화삭제", "!숨고", "!메뉴추천", "!도움말", "!콘텐츠정책"] and not event["type"] == "app_mention":
             initial_message = say(
                 text=":spinner: _이어지는 질문을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
