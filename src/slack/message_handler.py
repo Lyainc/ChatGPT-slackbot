@@ -1,7 +1,7 @@
 import logging
 from slack_bolt.app import App
 from typing import Any, Callable
-from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete
+from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, policy_prompt_template
 from utils.utils import get_user_name, healthcheck_response
 from utils.openai_utils import user_conversations, user_conversations_lock
 from slack.slack_events import respond_to_user, recognize_conversation, delete_thread_messages
@@ -19,21 +19,14 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
             ts=message_ts,
             text=f":robot_face: _답변이 완료되었습니다._",
         )
-    
-    logging.info("Received an event")
-    
+
     try:
-       
-        if "text" not in event:
-            logging.warning("No text found in the event. Processing with default response.")
-            return
-        
         user_message = event["text"]
         user_id = event["user"]
         channel_id = event["channel"]
         thread_ts = event.get("thread_ts") or event["ts"]
         user_name = get_user_name(app, user_id)
-
+        
         if not user_name:
             say(
                 text=":robot_face: _사용자 이름을 가져오지 못했습니다._", 
@@ -42,13 +35,13 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 icon_emoji=True
             )
         
-        logging.info(f"Received message: {user_message}")
-        
         if "@U076EJQTPNC" in user_message:
             user_message = user_message.replace("<@U076EJQTPNC>", "")
+            logging.info(f"Received message: {user_message}")
     
         if user_message.startswith("!대화시작") or event["type"] == "app_mention":
             user_message = user_message.replace("!대화시작", "")
+            logging.info(f"Received message: {user_message}")
             initial_message = say(
                 text=f":robot_face: _안녕하세요 {user_name}님!_ \n:spinner: _대화 시작을 인식했습니다. ChatGPT에게 질문을 하고 있습니다._", 
                 thread_ts=thread_ts, 
@@ -86,10 +79,11 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 icon_emoji=True
             )
             
-        elif user_message.startswith("!메뉴추천") or "!메뉴추천" in user_message:
+        elif "!메뉴추천" in user_message:
             if user_message.startswith("!메뉴추천"):
-                user_message = user_message[len("!메뉴추천"):].strip()
-                
+                user_message = user_message.replace("!메뉴추천", "")
+
+            logging.info(f"Received message: {user_message}")                
             initial_message = say(text=":spinner: _추천 메뉴를 선택하고 있습니다._", thread_ts=thread_ts, mrkdwn=True, icon_emoji=True) 
             logging.info(f"Fetched data from Notion")
             
@@ -99,10 +93,10 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
             respond_to_user(user_id, user_name, thread_ts, user_message, say, menu_recommendation_prompt)
             update_finsh_message(channel_id, initial_message['ts'])
             
-        elif user_message.startswith("!숨고") or "!숨고" in user_message:
+        elif "!숨고" in user_message:
             if user_message.startswith("!숨고"):
-                user_message = user_message[len("!숨고"):].strip()
-                
+                user_message = user_message.replace("!숨고", "")
+            logging.info(f"Received message: {user_message}")    
             initial_message = say(
                 text=":spinner: _Soomgo Notion을 확인하고 있습니다._", 
                 thread_ts=thread_ts, 
@@ -115,7 +109,22 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
             notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
             
             respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt)
-            update_finsh_message(channel_id, initial_message['ts'])
+            update_finsh_message(channel_id, initial_message['ts']) 
+         
+        elif "!콘텐츠정책" in user_message:
+            if user_message.startswith("!콘텐츠정책"):
+                user_message = user_message.replace("!콘텐츠정책", "")
+            logging.info(f"Received message: {user_message}")
+            initial_message = say(
+                text=":spinner: _콘텐츠 정책을 확인하고 있습니다._", 
+                thread_ts=thread_ts, 
+                mrkdwn=True, 
+                icon_emoji=True
+            ) 
+            logging.info(f"Fetched data from policy")
+            
+            respond_to_user(user_id, user_name, thread_ts, user_message, say, policy_prompt_template)
+            update_finsh_message(channel_id, initial_message['ts'])   
             
         elif "text" in event and user_message.startswith("!대화삭제"):
             delete_thread_messages(channel_id, thread_ts)
@@ -126,7 +135,8 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 thread_ts=thread_ts, 
                 mrkdwn=True, 
                 icon_emoji=True
-                )   
+                )
+            logging.info(f"Received message: {user_message}")   
             respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
             update_finsh_message(channel_id, initial_message['ts'])
             
@@ -138,14 +148,6 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 mrkdwn=True, 
                 icon_emoji=True
             )
-                
-        else:
-            logging.error("Cannot read conversation: ", exc_info=True)
-            say(text=":robot_face: _ChatGPT가 대화를 인식하지 못했습니다._", 
-                thread_ts=thread_ts, 
-                mrkdwn=True, 
-                icon_emoji=True
-            )
-
+            
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)

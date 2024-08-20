@@ -4,7 +4,7 @@ import re
 from slack_bolt.app import App
 from utils.cache import load_cache, load_summarized_cache
 from utils.openai_utils import split_message_into_blocks, calculate_token_per_price, get_openai_response, user_conversations, user_conversations_lock
-from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, advanced_model
+from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, advanced_model, policy_prompt_template
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)
@@ -145,6 +145,12 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str) -> Non
                     notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
                     notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
                     append_user_message("system", notion_prompt)
+                    continue
+                
+                if message["text"].startswith("!콘텐츠정책"):
+                    message["text"] = message["text"][len("!콘텐츠정책"):].strip()
+
+                    append_user_message("system", policy_prompt_template)
                     continue
                 
                 if message["text"].startswith("!메뉴추천"):
