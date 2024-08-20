@@ -136,8 +136,12 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 mrkdwn=True, 
                 icon_emoji=True
                 )
-            logging.info(f"Received message: {user_message}")   
-            respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
+            logging.info(f"Received message: {user_message}")
+            with user_conversations_lock:
+                if user_conversations[user_id][thread_ts][0]['role'] == "system" and user_conversations[user_id][thread_ts][0]['content'] == "":
+                    respond_to_user(user_id, user_name, thread_ts, user_message, say, basic_prompt)
+                else:
+                    respond_to_user(user_id, user_name, thread_ts, user_message, say, prompt="")
             update_finsh_message(channel_id, initial_message['ts'])
             
         elif "text" in event and "!도움말" in user_message:
