@@ -42,7 +42,6 @@ def clean_values(data: str, parent_key=None) -> str:
         if parent_key and f'notion page link[https://notion.so/soomgo/{parent_key}]' not in data:
             data = f'notion page link[https://notion.so/soomgo/{parent_key}]: {data}'
         return data
-    return data
 
 def save_cache(data: str) -> None:
     '''
@@ -112,5 +111,4 @@ def summarize_by_openai(data: str) -> str:
     
     answer = completion.choices[0].message.content.strip()
     answer = clean_values(answer)
-    
     return answer

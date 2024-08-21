@@ -2,9 +2,10 @@ import logging
 import time
 import re
 from slack_bolt.app import App
+from typing import Any
 from utils.cache import load_cache, load_summarized_cache
 from utils.openai_utils import split_message_into_blocks, calculate_token_per_price, get_openai_response, user_conversations, user_conversations_lock
-from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, advanced_model, policy_prompt_template
+from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, policy_prompt_template, advanced_model
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)
@@ -17,13 +18,18 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     with user_conversations_lock:
         if user_id not in user_conversations:
             user_conversations[user_id] = {}
-            
+        
         if thread_ts not in user_conversations[user_id]:
-            user_conversations[user_id][thread_ts] = [
+                user_conversations[user_id][thread_ts] = [
                 {"role": "system", "content": prompt}
             ]
-                    
-        user_conversations[user_id][thread_ts].append({"role": "user", "content": user_message})
+        
+        user_conversations[user_id][thread_ts][0]["content"] = prompt
+        user_conversations[user_id][thread_ts][0]["role"] = "system"
+            
+        user_conversations[user_id][thread_ts].append(
+            {"role": "user", "content": user_message}
+            )
 
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
@@ -35,7 +41,6 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     prompt_tokens = response["prompt_tokens"]
     completion_tokens = response["completion_tokens"]
 
-    answer = answer.replace("**", "*")
     answer = answer.replace("- ", " - ")
     answer = answer.replace("###", ">")
     answer = re.sub(r'\[(.*?)\]\((.*?)\)', r'<\2|\1>', answer) 
@@ -109,10 +114,16 @@ def read_conversation_history(channel_id: str, thread_ts: str) -> list:
     messages = conversation.get("messages", [])
     return messages
 
-def recognize_conversation(user_id: str, thread_ts: str, channel_id: str) -> None:
+def recognize_conversation(event: dict[str, Any]) -> None:
     '''
     thread의 대화 내용을 dictionary에 저장합니다.
     '''
+    user_message = event["text"]
+    user_id = event["user"]
+    channel_id = event["channel"]
+    thread_ts = event.get("thread_ts") or event["ts"]
+    channel_type = event.get("channel_type")
+
     conversation_history = read_conversation_history(channel_id, thread_ts)
     
     def append_user_message(role: str, content: str) -> None:
@@ -128,52 +139,29 @@ def recognize_conversation(user_id: str, thread_ts: str, channel_id: str) -> Non
                 user_conversations[user_id] = {}
             
             user_conversations[user_id][thread_ts] = []
+            user_conversations[user_id][thread_ts].append({
+                "role": "user",
+                "content": user_message
+            })
             
-            for message in conversation_history:
+            for conversation_message in conversation_history:
                 
-                if message["text"].startswith("!대화시작"):
-                    message["text"] = message["text"][len("!대화시작"):].strip()
-                    user_message = message["text"]
-                    
-                    append_user_message("system", basic_prompt)
-                    append_user_message("user", user_message)
+                if (conversation_message["text"].startswith(":robot_face:") or 
+                    conversation_message["text"].startswith(":spinner:") or 
+                    ("<@U076EJQTPNC>" not in conversation_message["text"] and channel_type in ["channel", "group"])
+                    ):
                     continue
                 
-                if message["text"].startswith("!숨고"):
-                    message["text"] = message["text"][len("!숨고"):].strip()
-                    
-                    notion_cache = {key: value for key, value in load_summarized_cache().items() if key != "dcaf6463dc8b4dfbafa6eafe6ea3881c"}
-                    notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
-                    append_user_message("system", notion_prompt)
-                    continue
-                
-                if message["text"].startswith("!콘텐츠정책"):
-                    message["text"] = message["text"][len("!콘텐츠정책"):].strip()
-
-                    append_user_message("system", policy_prompt_template)
-                    continue
-                
-                if message["text"].startswith("!메뉴추천"):
-                    message["text"] = message["text"][len("!메뉴추천"):].strip()
-        
-                    notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-                    menu_recommendation_prompt = f"""원본 데이터:\njson```{notion_cache}```\n{menu_recommendation_prompt_templete}"""
-                    append_user_message("system", menu_recommendation_prompt)
-                    continue
-                
-                if message["text"].startswith(":robot_face:") or message["text"].startswith(":spinner:") or message["text"].startswith("!"):
-                    continue
-                
-                if message["user"] == "U076EJQTPNC" and message["blocks"]:
-                    for block in message["blocks"]:
+                if conversation_message["user"] == "U076EJQTPNC" and conversation_message["blocks"]:
+                    for block in conversation_message["blocks"]:
                         if block.get("type") == "section":
                             section_text = block["text"].get("text")
-                    append_user_message("assistant", section_text)        
+                            append_user_message("assistant", section_text)   
                     continue
-                
-                if message["user"] == user_id and not message["text"].startswith("!"):
-                    append_user_message("user", message["text"])                     
-                    continue
+
+                if (conversation_message["user"] != "U076EJQTPNC" and "<@U076EJQTPNC>" in conversation_message["text"]) or channel_type in ["im", "mpim"]:
+                    conversation_message["text"] = conversation_message["text"].replace("<@U076EJQTPNC>", "")
+                    append_user_message("user", conversation_message["text"])
               
     except Exception as e:
         logging.error("Unexpected error:", exc_info=True)
@@ -207,7 +195,7 @@ def delete_thread_messages(channel_id, thread_ts) -> None:
             except Exception as e:
                 logging.error(f"Error deleting thread message: {e.response['error']}")
                 
-            time.sleep(1)
+            time.sleep(0.5)
 
     except Exception as e:
         logging.error(f"Error fetching thread history: {e.response['error']}")
