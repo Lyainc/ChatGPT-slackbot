@@ -18,6 +18,9 @@ queue_listener = QueueListener(log_queue, console_handler)
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)  # Fix: Corrected logging level setting
 
+file_handler = logging.FileHandler('heartbeat.log')
+file_handler.setLevel(logging.INFO)
+
 # Remove any existing handlers from the root logger
 for handler in root_logger.handlers[:]:
     root_logger.removeHandler(handler)
@@ -25,6 +28,8 @@ for handler in root_logger.handlers[:]:
 # Add QueueHandler to root logger
 queue_handler = QueueHandler(log_queue)
 root_logger.addHandler(queue_handler)
+
+file_handler.setFormatter(formatter)
 
 # Start QueueListener
 queue_listener.start()

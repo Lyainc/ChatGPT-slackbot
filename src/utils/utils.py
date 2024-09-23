@@ -1,7 +1,5 @@
 import openai
 import logging
-import threading
-import sys
 import requests
 from slack_bolt import App
 from config.config import slack_bot_token, slack_signing_secret, default_openai_api_key, notion_integration_key

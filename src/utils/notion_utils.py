@@ -3,8 +3,8 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from config.config import notion_integration_key
 from utils.cache import load_cache, save_cache
-app = notion_client.Client(auth=notion_integration_key)
 
+app = notion_client.Client(auth=notion_integration_key)
 cached_data = load_cache()
 
 def fetch_notion_restaurant_data (database_id: str) -> dict:
@@ -23,7 +23,7 @@ def fetch_notion_restaurant_data (database_id: str) -> dict:
 
             for comment in comments_response.get('results', []):
                 for rich_text in comment.get('rich_text', []):
-                    comments.append(rich_text.get('plain_text', ''))  # `plain_text` 추출
+                    comments.append(rich_text.get('plain_text', ''))
     
         time = result['properties']['이동 시간']['select']['name']
         link = result['properties']['위치']['url']
@@ -44,7 +44,7 @@ def fetch_notion_restaurant_data (database_id: str) -> dict:
         
     json_results = json.dumps(results_list, ensure_ascii=False, separators=(',', ':'))
     cached_data[database_id] = json_results
-    save_cache(cached_data)  # 업데이트된 캐시 저장
+    save_cache(cached_data)
 
     return json_results
 
@@ -52,9 +52,8 @@ def fetch_notion_page_data(page_id: str) -> str:
     """
     Notion 페이지의 모든 텍스트를 가져옵니다.
     """
-    # 캐시에서 데이터 확인
     if page_id in cached_data:
-        return cached_data[page_id]  # 캐시된 데이터 반환
+        return cached_data[page_id]
 
     visited_synced_blocks = set()
 
@@ -62,7 +61,6 @@ def fetch_notion_page_data(page_id: str) -> str:
         children = app.blocks.children.list(block_id=block_id).get("results", [])
         texts = []
 
-        # Use ThreadPoolExecutor for concurrent fetching
         with ThreadPoolExecutor() as executor:
             futures = {executor.submit(process_block, block): block for block in children}
             for future in futures:

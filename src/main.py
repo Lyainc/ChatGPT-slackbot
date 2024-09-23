@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import json
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from utils.logger import stop_listener
@@ -10,7 +11,7 @@ from config.config import slack_bot_token, slack_app_token, slack_signing_secret
 from slack.message_handler import process_message
 from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data
 
-app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
+app = App(token=slack_bot_token, signing_secret=slack_signing_secret, request_timeout=30)
 
 # 전역 데이터 캐시 딕셔너리 선언
 notion_data_cache = {}
@@ -40,7 +41,8 @@ async def preload_notion_data() -> None:
         summarized_data = summary_cache()
         with open(SUMMARY_CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(summarized_data, f, ensure_ascii=False, indent=4)
-
+            
+            
 @app.event("message")
 def handle_message_event(event, say):
     # 메시지가 멘션을 포함하지 않는 경우만 처리
@@ -70,6 +72,7 @@ def start_bot() -> None:
         asyncio.run(preload_notion_data())
         handler = SocketModeHandler(app, app_token=slack_app_token)
         handler.start()
+
     except Exception as e:
         logging.error("Error starting Slack app:", exc_info=True)
 
