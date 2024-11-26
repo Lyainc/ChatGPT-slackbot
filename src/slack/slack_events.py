@@ -3,9 +3,8 @@ import time
 import re
 from slack_bolt.app import App
 from typing import Any
-from utils.cache import load_cache, load_summarized_cache
 from utils.openai_utils import split_message_into_blocks, calculate_token_per_price, get_openai_response, user_conversations, user_conversations_lock
-from config.config import slack_bot_token, slack_signing_secret, slack_user_token, basic_prompt, notion_prompt_templete, menu_recommendation_prompt_templete, policy_prompt_template, advanced_model
+from config.config import slack_bot_token, slack_signing_secret, slack_user_token, advanced_model
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)

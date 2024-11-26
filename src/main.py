@@ -5,8 +5,7 @@ import json
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from utils.logger import stop_listener
-from utils.cache import summary_cache, SUMMARY_CACHE_FILE
-from slack.slack_events import load_summarized_cache
+from utils.cache import summary_cache, load_summarized_cache, SUMMARY_CACHE_FILE
 from config.config import slack_bot_token, slack_app_token, slack_signing_secret, NOTION_PAGE_IDS
 from slack.message_handler import process_message
 from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data

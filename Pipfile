@@ -9,6 +9,7 @@ slack-bolt = "*"
 python-dotenv = "*"
 pyngrok = "*"
 notion-client = "*"
+requests = "*"
 
 [dev-packages]
 

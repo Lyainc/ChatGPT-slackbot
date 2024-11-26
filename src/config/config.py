@@ -11,7 +11,9 @@ default_openai_api_key = os.getenv('DEFAULT_OPENAI_API_KEY')
 notion_integration_key = os.getenv('NOTION_INTEGRATION_KEY')
 
 default_model = "gpt-4o-mini-2024-07-18"
-advanced_model = "gpt-4o-2024-08-06"
+advanced_model = "gpt-4o-2024-11-20"
+complex_model_mini = "o1-mini-2024-09-12"
+complex_model = "o1-preview-2024-09-12"
 
 NOTION_PAGE_IDS = [
     "dcaf6463dc8b4dfbafa6eafe6ea3881c",
