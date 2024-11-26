@@ -9,7 +9,7 @@ from config.config import slack_bot_token, slack_signing_secret, slack_user_toke
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)
 
-def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str) -> None:
+def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str, model) -> None:
     '''
     user에게 ChatGPT의 결과물을 반환합니다.
     '''
@@ -34,7 +34,7 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
     
     start_time = time.time()
-    response = get_openai_response(user_id, thread_ts, advanced_model, user_message)
+    response = get_openai_response(user_id, thread_ts, model, user_message)
   
     answer = response["answer"]
     prompt_tokens = response["prompt_tokens"]

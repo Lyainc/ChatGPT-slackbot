@@ -10,7 +10,7 @@ from config.config import slack_bot_token, slack_app_token, slack_signing_secret
 from slack.message_handler import process_message
 from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data
 
-app = App(token=slack_bot_token, signing_secret=slack_signing_secret, request_timeout=30)
+app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
 # 전역 데이터 캐시 딕셔너리 선언
 notion_data_cache = {}
