@@ -20,6 +20,8 @@ def calculate_token_per_price(question_token: int, answer_token: int, model_name
             total_price = question_token * 0.00015 / 1000 + answer_token * 0.0006 / 1000
         elif model_name == "gpt-4o-2024-11-20":
             total_price = question_token * 0.0025 / 1000 + answer_token * 0.01 / 1000
+        elif model_name == "o1-preview-2024-09-12":
+            total_price = question_token * 0.0150 / 1000 + answer_token * 0.06 / 1000
     except Exception as e:
             logging.error(f"Model is not vaild : {e}", exc_info=True)
             total_price = 0

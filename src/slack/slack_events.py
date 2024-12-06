@@ -4,15 +4,16 @@ import re
 from slack_bolt.app import App
 from typing import Any
 from utils.openai_utils import split_message_into_blocks, calculate_token_per_price, get_openai_response, user_conversations, user_conversations_lock
-from config.config import slack_bot_token, slack_signing_secret, slack_user_token, advanced_model
+from config.config import slack_bot_token, slack_signing_secret, slack_user_token
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 user_app = App(token=slack_user_token, signing_secret=slack_signing_secret)
 
-def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str, model) -> None:
+def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: str, say, prompt: str, model: str) -> None:
     '''
     user에게 ChatGPT의 결과물을 반환합니다.
     '''
+
     
     with user_conversations_lock:
         if user_id not in user_conversations:
@@ -51,14 +52,19 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     
     # 4. 인용문 포맷 처리
     answer = re.sub(r'^>+', '> ', answer, flags=re.MULTILINE)
+    
+    # 5. 2개 이상 빈줄 하나로 처리
+    answer = re.sub(r'\n\s*\n', '\n', answer)
+    
+    # 6. 링크 양식에 맞게 변경
     answer = re.sub(r'\[(.*?)\]\((.*?)\)', r'<\2|\1>', answer) 
-
+    
     message_blocks = split_message_into_blocks(answer)
     
     end_time = time.time()
     elapsed_time_ms = (end_time - start_time) * 1000
     
-    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, advanced_model)
+    expected_price = calculate_token_per_price(prompt_tokens, completion_tokens, model)
     current_time = time.localtime()
     formatted_time = time.strftime("%Y년 %m월 %d일 %H시 %M분 %S초", current_time)
 

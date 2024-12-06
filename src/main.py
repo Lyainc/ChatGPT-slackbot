@@ -8,7 +8,8 @@ from utils.logger import stop_listener
 from utils.cache import summary_cache, load_summarized_cache, SUMMARY_CACHE_FILE
 from config.config import slack_bot_token, slack_app_token, slack_signing_secret, NOTION_PAGE_IDS
 from slack.message_handler import process_message
-from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data
+# from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data
+from utils.notion_utils import fetch_notion_page_data
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
@@ -21,13 +22,14 @@ async def preload_notion_data() -> None:
     
     for page_id in NOTION_PAGE_IDS:
         try:
-            if page_id == "dcaf6463dc8b4dfbafa6eafe6ea3881c":
-               # 특정 UUID일 때 fetch_notion_restaurant_data 호출
-               notion_data = await asyncio.get_event_loop().run_in_executor(None, fetch_notion_restaurant_data, page_id)
-            else:
-               # 나머지 UUID일 때 fetch_notion_page_data 호출
-               notion_data = await asyncio.get_event_loop().run_in_executor(None, fetch_notion_page_data, page_id)
-
+            # if page_id == "dcaf6463dc8b4dfbafa6eafe6ea3881c":
+            #    # 특정 UUID일 때 fetch_notion_restaurant_data 호출
+            #    notion_data = await asyncio.get_event_loop().run_in_executor(None, fetch_notion_restaurant_data, page_id)
+            # else:
+            #    # 나머지 UUID일 때 fetch_notion_page_data 호출
+            #    notion_data = await asyncio.get_event_loop().run_in_executor(None, fetch_notion_page_data, page_id)
+            
+            notion_data = await asyncio.get_event_loop().run_in_executor(None, fetch_notion_page_data, page_id)
             notion_data_cache[page_id] = notion_data  # 데이터 캐시에 저장
             logging.info(f"Notion 데이터 {page_id} 초기화했습니다.")
         except Exception as e:

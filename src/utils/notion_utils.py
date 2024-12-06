@@ -7,46 +7,46 @@ from utils.cache import load_cache, save_cache
 app = notion_client.Client(auth=notion_integration_key)
 cached_data = load_cache()
 
-def fetch_notion_restaurant_data (database_id: str) -> dict:
-    '''
-    Notion의 식당 데이터를 fetch합니다.
-    '''
-    response = app.databases.query(database_id)
-    results_list = []
-    comments = []
+# def fetch_notion_restaurant_data (database_id: str) -> dict:
+#     '''
+#     Notion의 식당 데이터를 fetch합니다.
+#     '''
+#     response = app.databases.query(database_id)
+#     results_list = []
+#     comments = []
     
-    for result in response['results']:
-        page_id = result['id']
+#     for result in response['results']:
+#         page_id = result['id']
         
-        if not cached_data:
-            comments_response = app.comments.list(block_id=page_id)
+#         if not cached_data:
+#             comments_response = app.comments.list(block_id=page_id)
 
-            for comment in comments_response.get('results', []):
-                for rich_text in comment.get('rich_text', []):
-                    comments.append(rich_text.get('plain_text', ''))
+#             for comment in comments_response.get('results', []):
+#                 for rich_text in comment.get('rich_text', []):
+#                     comments.append(rich_text.get('plain_text', ''))
     
-        time = result['properties']['이동 시간']['select']['name']
-        link = result['properties']['위치']['url']
-        type = result['properties']['음식 종류']['select']['name']
-        name = result['properties']['가게 이름']['title'][0]['text']['content']
-        menu = result['properties']['추천 메뉴']['rich_text'][0]['text']['content']
+#         time = result['properties']['이동 시간']['select']['name']
+#         link = result['properties']['위치']['url']
+#         type = result['properties']['음식 종류']['select']['name']
+#         name = result['properties']['가게 이름']['title'][0]['text']['content']
+#         menu = result['properties']['추천 메뉴']['rich_text'][0]['text']['content']
 
-        result_dict = {
-            '상호명': name,
-            '구분': type,
-            '추천 메뉴': menu,
-            '이동 시간': time,
-            '링크': link,
-            '후기': comments
-        }
+#         result_dict = {
+#             '상호명': name,
+#             '구분': type,
+#             '추천 메뉴': menu,
+#             '이동 시간': time,
+#             '링크': link,
+#             '후기': comments
+#         }
         
-        results_list.append(result_dict)
+#         results_list.append(result_dict)
         
-    json_results = json.dumps(results_list, ensure_ascii=False, separators=(',', ':'))
-    cached_data[database_id] = json_results
-    save_cache(cached_data)
+#     json_results = json.dumps(results_list, ensure_ascii=False, separators=(',', ':'))
+#     cached_data[database_id] = json_results
+#     save_cache(cached_data)
 
-    return json_results
+#     return json_results
 
 def fetch_notion_page_data(page_id: str) -> str:
     """
