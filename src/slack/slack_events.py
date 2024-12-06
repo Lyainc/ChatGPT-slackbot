@@ -15,28 +15,45 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     '''
 
     
+    # with user_conversations_lock:
+    #     if user_id not in user_conversations:
+    #         user_conversations[user_id] = {}
+        
+    #     if thread_ts not in user_conversations[user_id]:
+    #             user_conversations[user_id][thread_ts] = [
+    #             {"role": "system", "content": prompt}
+    #         ]
+        
+    #     user_conversations[user_id][thread_ts][0]["content"] = prompt
+    #     user_conversations[user_id][thread_ts][0]["role"] = "system"
+            
+    #     user_conversations[user_id][thread_ts].append(
+    #         {"role": "user", "content": user_message}
+    #         )
+
     with user_conversations_lock:
         if user_id not in user_conversations:
             user_conversations[user_id] = {}
-        
-        if thread_ts not in user_conversations[user_id]:
-                user_conversations[user_id][thread_ts] = [
-                {"role": "system", "content": prompt}
-            ]
-        
-        user_conversations[user_id][thread_ts][0]["content"] = prompt
-        user_conversations[user_id][thread_ts][0]["role"] = "system"
             
-        user_conversations[user_id][thread_ts].append(
-            {"role": "user", "content": user_message}
+        if thread_ts not in user_conversations[user_id] and model != "o1-preview-2024-09-12":
+            user_conversations[user_id][thread_ts] = [
+            {"role": "system", "content": prompt}
+        ]
+            user_conversations[user_id][thread_ts].append(
+                {"role": "user", "content": user_message}
             )
+        else:
+            user_conversations[user_id][thread_ts] = [
+            {"role": "user", "content": user_message}
+        ]  
+
 
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
     logging.info(f"Queue size: {len(user_conversations[user_id][thread_ts])}")
     
     start_time = time.time()
     response = get_openai_response(user_id, thread_ts, model, user_message)
-  
+
     answer = response["answer"]
     prompt_tokens = response["prompt_tokens"]
     completion_tokens = response["completion_tokens"]
@@ -58,6 +75,9 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     
     # 6. 링크 양식에 맞게 변경
     answer = re.sub(r'\[(.*?)\]\((.*?)\)', r'<\2|\1>', answer) 
+    
+    # 7. **를 *으로 교체
+    answer = answer.replace("**", "*")
     
     message_blocks = split_message_into_blocks(answer)
     

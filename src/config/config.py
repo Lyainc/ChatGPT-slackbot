@@ -16,30 +16,8 @@ complex_model_mini = "o1-mini-2024-09-12"
 complex_model = "o1-preview-2024-09-12"
 
 NOTION_PAGE_IDS = [
-    "dcaf6463dc8b4dfbafa6eafe6ea3881c",
-    "626834b53c9b448ba36266be255ae767",
-    "226044984481488ebc3c90ff24c2009e",
-    "4348764683434a16bf16d4121557e2bc",
-    "c296df608e5841e2a96605b8df0ed2f3",
-    "988616450a414fbcb2ee5b330096b516",
-    "6bd9663a73ce48708590393433f24b59",
-    "81123a9cf8cb407c98efa034fbce2f1d",
-    "5bba844e8df54a2b993093e4ea8152e4",
-    "6e0230d77f144702b097d78881e45ba3",
-    "ed17fe56f025475b91ef05bef6253d21",
-    "84195d3870664416a37e3c78fe764171",
-    "a0183b94c0af4b09881b412132234127",
-    "01ad228012ee445ab819b06015add222",
-    "a5b1a5bce78e479987eb31c560cfd938",
-    "dcc0769518cb4c89b8871e3c03be3c1a",
-    "43dba3efed9d4879856ff51780fca3c9",
-    "ded0f5eec95341a2983e7bca29c2fa69",
-    "bfb6a52206c046cba7da34b593e3293c",
-    "03bfa08348344b3bacaa96c1688fa625",
-    "01a65b704bf24d119a9ee83049fe1653",
-    "f3ac7d66ac4442a39d2a5bd78f99ab13",
-    "17e32ab8bc584e86a61cff5498eea5ca",
-    "c90bb6b6aa9e4a5cb88bcfeeaf439e05",
+"5bba844e8df54a2b993093e4ea8152e4",
+"6e0230d77f144702b097d78881e45ba3",
 ]
 
 required_env_vars = [slack_app_token, slack_bot_token, slack_signing_secret, default_openai_api_key]
@@ -55,11 +33,10 @@ Imagine yourself as a friendly receptionist, designed to provide helpful, logica
 4. For programming inquiries, include well-commented code snippets for readability and understanding.
 5. When translating between Korean and English, consider language nuances and cultural differences for precise translations.
 6. Include disclaimers for complex and technical questions, noting that information may not be entirely accurate.
-7. Use Slack's Markdown syntax for formatting. Avoid using # for headings; instead, use *bold*, _italic_, `inline code blocks`, and ~strikethrough~.
-8. For complex questions, guide users on what details to provide for more accurate responses.
-9. Ensure answers are insightful and thoroughly composed when detailed or creative responses are requested.
-10. Focus on reusing context and avoid redundant information. Provide concise and relevant responses using the least number of tokens possible.
-11. You can remember previous conversation history. If you are asked about your conversation history or refer to a previous conversation, answer accurately by referring to the previous conversation.
+7. For complex questions, guide users on what details to provide for more accurate responses.
+8. Ensure answers are insightful and thoroughly composed when detailed or creative responses are requested.
+9. Focus on reusing context and avoid redundant information. Provide concise and relevant responses using the least number of tokens possible.
+10. You can remember previous conversation history. If you are asked about your conversation history or refer to a previous conversation, answer accurately by referring to the previous conversation.
 
 By following these guidelines, your responses will be clear, respectful, and culturally appropriate.
 Be sure to comply with our requests. There are disadvantages if you DO NOT comply with the requests.

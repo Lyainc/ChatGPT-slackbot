@@ -1,11 +1,11 @@
 import logging
 from slack_bolt.app import App
 from typing import Any, Callable
-from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_templete, complex_model, advanced_model, menu_recommendation_prompt_templete, policy_prompt_template
+from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_templete, complex_model, advanced_model
 from utils.utils import get_user_name, healthcheck_response
 from utils.openai_utils import user_conversations, user_conversations_lock
 from slack.slack_events import respond_to_user, recognize_conversation, delete_thread_messages
-from utils.cache import load_cache, load_summarized_cache
+from utils.cache import load_summarized_cache
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)
 
