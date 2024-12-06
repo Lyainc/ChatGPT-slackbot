@@ -40,8 +40,17 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     prompt_tokens = response["prompt_tokens"]
     completion_tokens = response["completion_tokens"]
 
-    answer = answer.replace("- ", " - ")
-    answer = answer.replace("###", ">")
+    # 1. 링크 변환
+    answer = re.sub(r'\[(.*?)\]\((.*?)\)', r'<\2|\1>', answer)
+
+    # 2. 헤더를 볼드체로 변환
+    answer = re.sub(r"#{3,}\s*(.*?)", r"*\1*", answer)
+
+    # 3. 리스트 점(•)으로 개선, 기존 중복 대응
+    answer = answer.replace(" - ", "• ")
+    
+    # 4. 인용문 포맷 처리
+    answer = re.sub(r'^>+', '> ', answer, flags=re.MULTILINE)
     answer = re.sub(r'\[(.*?)\]\((.*?)\)', r'<\2|\1>', answer) 
 
     message_blocks = split_message_into_blocks(answer)
