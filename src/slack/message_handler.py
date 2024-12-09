@@ -41,23 +41,7 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                     mrkdwn=True, 
                     icon_emoji=True
                 )
-                
-            # elif "!메뉴추천" in user_message:
-            #     logging.info(f"Received message: {user_message}")
-            #     initial_message = say(
-            #         text=":spinner: _추천 메뉴를 선택하고 있습니다._", 
-            #         thread_ts=thread_ts, 
-            #         mrkdwn=True, 
-            #         icon_emoji=True
-            #     ) 
-            #     logging.info(f"Fetched data from Notion")
-                
-            #     notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-            #     menu_recommendation_prompt = f"원본 데이터: \n```json{notion_cache}```\n{menu_recommendation_prompt_templete}"
-                
-            #     respond_to_user(user_id, user_name, thread_ts, user_message, say, menu_recommendation_prompt)
-            #     update_finsh_message(channel_id, initial_message['ts'])
-                
+
             elif "!숨고" in user_message:
                 logging.info(f"Received message: {user_message}")    
                 initial_message = say(
@@ -86,20 +70,7 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 
                 respond_to_user(user_id, user_name, thread_ts, user_message, say, basic_prompt, complex_model)
                 update_finsh_message(channel_id, initial_message['ts'])   
-            
-            # elif "!콘텐츠정책" in user_message:
-            #     logging.info(f"Received message: {user_message}")
-            #     initial_message = say(
-            #         text=":spinner: _콘텐츠 정책을 확인하고 있습니다._", 
-            #         thread_ts=thread_ts, 
-            #         mrkdwn=True, 
-            #         icon_emoji=True
-            #     ) 
-            #     logging.info(f"Fetched data from policy")
-                
-            #     respond_to_user(user_id, user_name, thread_ts, user_message, say, policy_prompt_template)
-            #     update_finsh_message(channel_id, initial_message['ts'])
-                
+
             elif "text" in event and "!대화삭제" in user_message and user_id == "U024AL7PN0Y":
                 delete_thread_messages(channel_id, thread_ts)
                 
@@ -144,22 +115,6 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                     icon_emoji=True
                 )
                 
-            # elif "!메뉴추천" in user_message:
-            #     logging.info(f"Received message: {user_message}")                
-            #     initial_message = say(
-            #         text=":spinner: _추천 메뉴를 선택하고 있습니다._", 
-            #         thread_ts=thread_ts, 
-            #         mrkdwn=True, 
-            #         icon_emoji=True
-            #     ) 
-            #     logging.info(f"Fetched data from Notion")
-                
-            #     notion_cache = load_cache()["dcaf6463dc8b4dfbafa6eafe6ea3881c"]
-            #     menu_recommendation_prompt = f"원본 데이터: \n```json{notion_cache}```\n{menu_recommendation_prompt_templete}"
-                
-            #     respond_to_user(user_id, user_name, thread_ts, user_message, say, menu_recommendation_prompt)
-            #     update_finsh_message(channel_id, initial_message['ts'])
-                
             elif "!숨고" in user_message:
                 logging.info(f"Received message: {user_message}")    
                 initial_message = say(
@@ -175,20 +130,7 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 
                 respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt, advanced_model)
                 update_finsh_message(channel_id, initial_message['ts']) 
-            
-            # elif "!콘텐츠정책" in user_message:
-            #     logging.info(f"Received message: {user_message}")
-            #     initial_message = say(
-            #         text=":spinner: _콘텐츠 정책을 확인하고 있습니다._", 
-            #         thread_ts=thread_ts, 
-            #         mrkdwn=True, 
-            #         icon_emoji=True
-            #     ) 
-            #     logging.info(f"Fetched data from policy")
-                
-            #     respond_to_user(user_id, user_name, thread_ts, user_message, say, policy_prompt_template)
-            #     update_finsh_message(channel_id, initial_message['ts'])   
-                
+
             elif "!대화삭제" in user_message:
                 delete_thread_messages(channel_id, thread_ts)
                 

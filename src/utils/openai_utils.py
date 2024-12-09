@@ -50,26 +50,6 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
             print(answer)
             prompt_tokens, completion_tokens = completion.usage.prompt_tokens, completion.usage.completion_tokens
             
-            # if prompt_tokens + completion_tokens > 5000 and not "카토멘" or "숨고팀" in messages:
-            #     messages.append({
-            #         "role": "user", 
-            #         "content": """전체 대화 내용을 기존 분량에서 1/3정도로 최대한 상세하게 요약해줘. 
-            #         중간에 코드가 있다면 모든 코드가 요약에 포함될 필요는 없지만 요약을 위해 반드시 필요하다면 코드 조각은 요약문에 포함해도 좋아"""
-            #         })
-            #     summary_completion = openai_client.chat.completions.create(
-            #         model=model_name,
-            #         messages=messages,
-            #         user=user_id,
-            #         temperature=1,
-            #         frequency_penalty=0.1
-            #     )
-            
-            #     summary = summary_completion.choices[0].message.content.strip()
-            #     messages.clear()
-            #     messages.append({"role": "system", "content": basic_prompt})
-            #     messages.append({"role": "assistant", "content": summary})
-            #     messages.append({"role": "user", "content": question})
-                
             messages.append({"role": "assistant", "content": answer})
 
             user_conversations[user_id][thread_ts] = messages
@@ -91,26 +71,129 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
     except Exception as e:
         logging.error("Error generating OpenAI response:", exc_info=True)
         return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."
-    
+
+def get_openai_response(user_id: str, thread_ts: str, model_name: str, question: str) -> dict:
+    """
+    OpenAI API를 사용해 데이터를 가져옵니다.
+    """
+    try:
+        api_key = default_openai_api_key
+        
+        if api_key:
+            openai_client = openai.OpenAI(api_key=api_key)
+            
+            with user_conversations_lock:
+                messages = user_conversations.setdefault(user_id, {}).setdefault(thread_ts, [])
+                logging.info(f"Sending message to API: {messages}...")
+                completion = openai_client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    user=user_id,
+                )
+            
+            answer = completion.choices[0].message.content.strip()
+            print(answer)
+            prompt_tokens = completion.usage.prompt_tokens
+            completion_tokens = completion.usage.completion_tokens
+            
+            messages.append({"role": "assistant", "content": answer})
+
+            user_conversations[user_id][thread_ts] = messages
+
+            response = {
+                "answer": answer,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens
+            }
+            
+            return response
+            
+        else:
+            logging.error("Unauthorized user access: No API key found for user", exc_info=True)
+            return "Unauthorized user access. Please check your API key."
+    except openai.RateLimitError:
+        logging.error("Rate limit exceeded:", exc_info=True)
+        return "Server rate limit exceeded. Please try again later."
+    except Exception as e:
+        logging.error("Error generating OpenAI response:", exc_info=True)
+        return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."
+        
 def split_message_into_blocks(message: str, max_length=3000) -> list:
     '''
-    반환된 메시지의 길이가 일정 길이 이상인 경우 문맥 단위로 자릅니다.
+    반환된 메시지의 길이가 일정 길이 이상인 경우 문맥과 코드 블록을 고려하여 자릅니다.
     '''
-    paragraphs = message.split('\n\n')
+    import re
+
+    # 코드 블록을 식별하기 위한 정규식 패턴
+    code_block_pattern = re.compile(r'```[\s\S]*?```', re.MULTILINE)
+
+    # 현재 위치를 추적하기 위한 변수
+    pos = 0
+    segments = []
+
+    # 메시지를 순회하며 코드 블록과 텍스트 블록으로 분할
+    for match in code_block_pattern.finditer(message):
+        start, end = match.span()
+        # 코드 블록 이전의 텍스트 추가
+        if start > pos:
+            segments.append(message[pos:start])
+        # 코드 블록 자체 추가
+        segments.append(match.group())
+        pos = end
+
+    # 마지막 코드 블록 이후의 남은 텍스트 추가
+    if pos < len(message):
+        segments.append(message[pos:])
+
+    # 블록을 저장할 리스트와 현재 블록 문자열 초기화
     blocks = []
-    current_block = ""
+    current_block = ''
 
-    for paragraph in paragraphs:
-        if len(current_block) + len(paragraph) + 2 <= max_length:
-            if current_block:
-                current_block += '\n\n' + paragraph
+    # 세그먼트를 순회하며 블록을 생성
+    for segment in segments:
+        segment = segment.strip()
+        if not segment:
+            continue  # 빈 세그먼트는 건너뜀
+
+        if len(segment) > max_length:
+            # 세그먼트가 최대 길이보다 길 경우 추가 분할 필요
+            if segment.startswith('```') and segment.endswith('```'):
+                # 코드 블록인 경우
+                code_content = segment[3:-3].strip('\n')
+                code_lines = code_content.split('\n')
+                code_chunk = ''
+                for line in code_lines:
+                    if len('```\n' + code_chunk + line + '\n```') <= max_length:
+                        code_chunk += line + '\n'
+                    else:
+                        if code_chunk.strip():
+                            blocks.append('```\n' + code_chunk.strip('\n') + '\n```')
+                        code_chunk = line + '\n'
+                if code_chunk.strip():
+                    blocks.append('```\n' + code_chunk.strip('\n') + '\n```')
             else:
-                current_block = paragraph
+                # 텍스트 블록인 경우 문장 단위로 분할
+                sentences = re.split('(?<=[.!?]) +', segment)
+                for sentence in sentences:
+                    if len(current_block + sentence) + 1 <= max_length:
+                        current_block += sentence + ' '
+                    else:
+                        if current_block.strip():
+                            blocks.append(current_block.strip())
+                        current_block = sentence + ' '
+                if current_block.strip():
+                    blocks.append(current_block.strip())
+                    current_block = ''
         else:
-            blocks.append(current_block)
-            current_block = paragraph
+            if len(current_block + segment) + 1 <= max_length:
+                current_block += segment + '\n'
+            else:
+                if current_block.strip():
+                    blocks.append(current_block.strip())
+                current_block = segment + '\n'
 
-    if current_block:
-        blocks.append(current_block)
-    
+    # 마지막 블록 추가
+    if current_block.strip():
+        blocks.append(current_block.strip())
+
     return blocks

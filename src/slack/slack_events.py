@@ -13,39 +13,38 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     '''
     user에게 ChatGPT의 결과물을 반환합니다.
     '''
-
     
-    # with user_conversations_lock:
-    #     if user_id not in user_conversations:
-    #         user_conversations[user_id] = {}
-        
-    #     if thread_ts not in user_conversations[user_id]:
-    #             user_conversations[user_id][thread_ts] = [
-    #             {"role": "system", "content": prompt}
-    #         ]
-        
-    #     user_conversations[user_id][thread_ts][0]["content"] = prompt
-    #     user_conversations[user_id][thread_ts][0]["role"] = "system"
-            
-    #     user_conversations[user_id][thread_ts].append(
-    #         {"role": "user", "content": user_message}
-    #         )
-
     with user_conversations_lock:
         if user_id not in user_conversations:
             user_conversations[user_id] = {}
+        
+        if thread_ts not in user_conversations[user_id]:
+                user_conversations[user_id][thread_ts] = [
+                {"role": "system", "content": prompt}
+            ]
+        
+        user_conversations[user_id][thread_ts][0]["content"] = prompt
+        user_conversations[user_id][thread_ts][0]["role"] = "system"
             
-        if thread_ts not in user_conversations[user_id] and model != "o1-preview-2024-09-12":
-            user_conversations[user_id][thread_ts] = [
-            {"role": "system", "content": prompt}
-        ]
-            user_conversations[user_id][thread_ts].append(
-                {"role": "user", "content": user_message}
-            )
-        else:
-            user_conversations[user_id][thread_ts] = [
+        user_conversations[user_id][thread_ts].append(
             {"role": "user", "content": user_message}
-        ]  
+            )
+
+    # with user_conversations_lock:
+    #     if user_id not in user_conversations:
+    #         user_conversations[user_id] = {}
+            
+    #     if thread_ts not in user_conversations[user_id] and model != "o1-preview-2024-09-12":
+    #         user_conversations[user_id][thread_ts] = [
+    #         {"role": "system", "content": prompt}
+    #     ]
+    #         user_conversations[user_id][thread_ts].append(
+    #             {"role": "user", "content": user_message}
+    #         )
+    #     else:
+    #         user_conversations[user_id][thread_ts] = [
+    #         {"role": "user", "content": user_message}
+    #     ]  
 
 
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
