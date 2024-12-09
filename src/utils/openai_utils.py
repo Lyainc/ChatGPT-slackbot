@@ -92,168 +92,25 @@ def get_openai_response(user_id: str, thread_ts: str, model_name: str, question:
         logging.error("Error generating OpenAI response:", exc_info=True)
         return "현재 서비스가 원활하지 않습니다. 담당자에게 문의해주세요."
     
-# def split_message_into_blocks(message: str, max_length=3000) -> list:
-#     '''
-#     반환된 메시지의 길이가 일정 길이 이상인 경우 문맥 단위로 자릅니다.
-#     '''
-#     paragraphs = message.split('\n\n')
-#     blocks = []
-#     current_block = ""
-
-#     for paragraph in paragraphs:
-#         if len(current_block) + len(paragraph) + 2 <= max_length:
-#             if current_block:
-#                 current_block += '\n\n' + paragraph
-#             else:
-#                 current_block = paragraph
-#         else:
-#             blocks.append(current_block)
-#             current_block = paragraph
-
-#     if current_block:
-#         blocks.append(current_block)
-    
-#     return blocks
-
-
-# def split_message_into_blocks(message: str, max_length=3000) -> list:
-#     """
-#     Splits a long text into readable Slack message blocks by context and line, ensuring code blocks are preserved.
-#     """
-#     code_blocks = []
-
-#     # Function to replace code blocks with placeholders
-#     def replace_code_blocks(match):
-#         code_block = match.group(0)
-#         placeholder = f"<CODE_BLOCK_{len(code_blocks)}>"
-#         code_blocks.append(code_block)
-#         return placeholder
-
-#     # Replace code blocks with placeholders
-#     message = re.sub(r'```[\s\S]*?```', replace_code_blocks, message)
-
-#     # Split message into paragraphs
-#     paragraphs = re.split(r'(?:\n\n|\n)', message)
-#     blocks = []
-#     current_block = ""
-
-#     for paragraph in paragraphs:
-#         if re.match(r'<CODE_BLOCK_\d+>', paragraph.strip()):
-#             # Retrieve the actual code block to measure its length
-#             placeholder_index = int(re.findall(r'\d+', paragraph)[0])
-#             code_block = code_blocks[placeholder_index]
-            
-#             # Split code block if it exceeds max_length
-#             if len(code_block) > max_length:
-#                 split_code_blocks = split_code_block(code_block, max_length)
-#                 blocks.extend(split_code_blocks)
-#             else:
-#                 if current_block:
-#                     blocks.append(current_block)
-#                     current_block = ""
-#                 blocks.append(code_block)
-#             continue
-
-#         # Add regular paragraphs to current block or create a new block
-#         if len(current_block) + len(paragraph) + 2 <= max_length:
-#             current_block = f"{current_block}\n\n{paragraph}" if current_block else paragraph
-#         else:
-#             if current_block:
-#                 blocks.append(current_block)
-#             current_block = paragraph
-
-#     if current_block:
-#         blocks.append(current_block)
-
-#     return blocks
-
-# def split_code_block(code_block, max_length):
-#     """
-#     Splits a code block into smaller blocks without breaking its structure.
-#     """
-#     lines = code_block.split('\n')
-#     split_blocks = []
-#     current_block = '```\n'
-
-#     for line in lines:
-#         if len(current_block) + len(line) + 1 <= max_length:
-#             current_block += line + '\n'
-#         else:
-#             current_block += '```'
-#             split_blocks.append(current_block)
-#             current_block = '```\n' + line + '\n'
-
-#     if current_block.strip() != '```':
-#         current_block += '```'
-#         split_blocks.append(current_block)
-
-#     return split_blocks
 def split_message_into_blocks(message: str, max_length=3000) -> list:
-    """
-    Splits a long text into readable Slack message blocks by context and line, ensuring code blocks are preserved.
-    """
-    code_blocks = []
-
-    # Function to replace code blocks with placeholders
-    def replace_code_blocks(match):
-        code_block = match.group(0)
-        placeholder = f"<CODE_BLOCK_{len(code_blocks)}>"
-        code_blocks.append(code_block)
-        return placeholder
-
-    # Replace code blocks with placeholders
-    message = re.sub(r'```[\s\S]*?```', replace_code_blocks, message)
-
-    # Split message into paragraphs
-    paragraphs = re.split(r'\n{2,}', message)
+    '''
+    반환된 메시지의 길이가 일정 길이 이상인 경우 문맥 단위로 자릅니다.
+    '''
+    paragraphs = message.split('\n\n')
     blocks = []
     current_block = ""
 
     for paragraph in paragraphs:
-        if re.search(r'^<CODE_BLOCK_\d+>$', paragraph.strip()):
-            # Retrieve the actual code block to measure its length
-            match = re.match(r'<CODE_BLOCK_(\d+)>', paragraph.strip())
-            if match:
-                placeholder_index = int(match.group(1))
-                # 나머지 처리
-            code_block = code_blocks[placeholder_index]
-            
-            if len(code_block) > max_length:
-                split_code_blocks = split_code_block(code_block, max_length)
-                blocks.extend(split_code_blocks)
-            else:
-                if current_block:
-                    blocks.append(current_block)
-                    current_block = ""
-                blocks.append(code_block)
-            continue
-
-        # Add regular paragraphs to current block or create a new block
-        extra_length = 2 if current_block else 0
-        if len(current_block) + extra_length + len(paragraph) <= max_length:
-            current_block = f"{current_block}\n\n{paragraph}" if current_block else paragraph
-        else:
+        if len(current_block) + len(paragraph) + 2 <= max_length:
             if current_block:
-                blocks.append(current_block)
+                current_block += '\n\n' + paragraph
+            else:
+                current_block = paragraph
+        else:
+            blocks.append(current_block)
             current_block = paragraph
 
-            return blocks
-
-def split_code_block(code_block, max_length):
-    """
-    Splits a code block into smaller blocks without breaking its structure.
-    """
-    lines = code_block.strip('`').split('\n')
-    split_blocks = []
-    current_block = ''
-
-    for line in lines:
-           # 추가되는 '\n'과 종료 백틱의 길이 4를 고려
-           if len(current_block) + len(line) + 1 + 4 <= max_length:
-               current_block += line + '\n'
-           else:
-               current_block += '<CODE_BLOCK_9>\n' + line + '\n'
-    if current_block.strip() != '<CODE_BLOCK_10>':
-        split_blocks.append(current_block)
-        
-    return split_blocks
+    if current_block:
+        blocks.append(current_block)
+    
+    return blocks
