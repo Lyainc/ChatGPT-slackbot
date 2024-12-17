@@ -8,7 +8,6 @@ from utils.logger import stop_listener
 from utils.cache import summary_cache, load_summarized_cache, SUMMARY_CACHE_FILE
 from config.config import slack_bot_token, slack_app_token, slack_signing_secret, NOTION_PAGE_IDS
 from slack.message_handler import process_message
-# from utils.notion_utils import fetch_notion_page_data, fetch_notion_restaurant_data
 from utils.notion_utils import fetch_notion_page_data
 
 app = App(token=slack_bot_token, signing_secret=slack_signing_secret)

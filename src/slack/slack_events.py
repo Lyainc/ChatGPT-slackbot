@@ -14,37 +14,52 @@ def respond_to_user(user_id: str, user_name: str, thread_ts: str, user_message: 
     user에게 ChatGPT의 결과물을 반환합니다.
     '''
     
-    with user_conversations_lock:
-        if user_id not in user_conversations:
-            user_conversations[user_id] = {}
-        
-        if thread_ts not in user_conversations[user_id]:
-                user_conversations[user_id][thread_ts] = [
-                {"role": "system", "content": prompt}
-            ]
-        
-        user_conversations[user_id][thread_ts][0]["content"] = prompt
-        user_conversations[user_id][thread_ts][0]["role"] = "system"
-            
-        user_conversations[user_id][thread_ts].append(
-            {"role": "user", "content": user_message}
-            )
-
     # with user_conversations_lock:
     #     if user_id not in user_conversations:
     #         user_conversations[user_id] = {}
+        
+    #     if thread_ts not in user_conversations[user_id]:
+    #             user_conversations[user_id][thread_ts] = [
+    #             {"role": "system", "content": prompt}
+    #         ]
+        
+    #     user_conversations[user_id][thread_ts][0]["content"] = prompt
+    #     user_conversations[user_id][thread_ts][0]["role"] = "system"
             
-    #     if thread_ts not in user_conversations[user_id] and model != "o1-preview-2024-09-12":
-    #         user_conversations[user_id][thread_ts] = [
-    #         {"role": "system", "content": prompt}
-    #     ]
-    #         user_conversations[user_id][thread_ts].append(
-    #             {"role": "user", "content": user_message}
-    #         )
-    #     else:
-    #         user_conversations[user_id][thread_ts] = [
+    #     user_conversations[user_id][thread_ts].append(
     #         {"role": "user", "content": user_message}
-    #     ]  
+    #         )
+
+    with user_conversations_lock:
+        if user_id not in user_conversations:
+            user_conversations[user_id] = {}
+
+        if thread_ts not in user_conversations[user_id]:
+            user_conversations[user_id][thread_ts] = []
+
+        # 모델에 따라 다른 처리
+        if model == "o1-preview-2024-09-12":
+            # "o1-preview-2024-09-12"에서는 system prompt가 있으면 제거
+            if user_conversations[user_id][thread_ts] and user_conversations[user_id][thread_ts][0].get("role") == "system":
+                user_conversations[user_id][thread_ts].pop(0)
+            
+            # 바로 user_message 추가
+            user_conversations[user_id][thread_ts].append(
+                {"role": "user", "content": user_message}
+            )
+
+        elif model == "gpt-4o-2024-11-20":
+            # "gpt-4o-2024-11-20"에서는 system prompt가 반드시 맨 처음에 있어야 함
+            if not (user_conversations[user_id][thread_ts] and user_conversations[user_id][thread_ts][0].get("role") == "system"):
+                # system prompt 추가
+                user_conversations[user_id][thread_ts].insert(0, {"role": "system", "content": prompt})
+            
+            # user_message 추가
+            user_conversations[user_id][thread_ts].append(
+                {"role": "user", "content": user_message}
+            )
+
+    logging.info(f"Updated conversation for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")
 
 
     logging.info(f"Queued message for user: {user_name} (ID: {user_id}) in thread: {thread_ts}")

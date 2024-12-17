@@ -1,7 +1,7 @@
 import logging
 from slack_bolt.app import App
 from typing import Any, Callable
-from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_templete, complex_model, advanced_model
+from config.config import slack_bot_token, slack_signing_secret, basic_prompt, notion_prompt_template, complex_model, advanced_model
 from utils.utils import get_user_name, healthcheck_response
 from utils.openai_utils import user_conversations, user_conversations_lock
 from slack.slack_events import respond_to_user, recognize_conversation, delete_thread_messages
@@ -53,15 +53,16 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 logging.info(f"Fetched data from Notion")
                 
                 notion_cache = list(load_summarized_cache().values())
-                notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
+                notion_prompt = f"{notion_cache}\n{notion_prompt_template}"
                 
                 respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt, advanced_model)
                 update_finsh_message(channel_id, initial_message['ts'])
+                
             
             elif "!o1" in user_message:
                 logging.info(f"Received message: {user_message}")    
                 initial_message = say(
-                    text=":spinner: o1-preview를 사용하여 ChatGPT에게 질문을 하고 있습니다._", 
+                    text=":spinner: _o1-preview를 사용하여 ChatGPT에게 질문을 하고 있습니다._", 
                     thread_ts=thread_ts, 
                     mrkdwn=True, 
                     icon_emoji=True
@@ -126,7 +127,7 @@ def process_message(event: dict[str, Any], say: Callable[..., None]) -> str:
                 logging.info(f"Fetched data from Notion")
                 
                 notion_cache = list(load_summarized_cache().values())
-                notion_prompt = f"{notion_cache}\n{notion_prompt_templete}"
+                notion_prompt = f"{notion_cache}\n{notion_prompt_template}"
                 
                 respond_to_user(user_id, user_name, thread_ts, user_message, say, notion_prompt, advanced_model)
                 update_finsh_message(channel_id, initial_message['ts']) 
